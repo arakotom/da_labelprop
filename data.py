@@ -230,13 +230,14 @@ def get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=32, dr
                         bag_size = 50,
                         path = './data/office/',
                         miss_feature=None,
+                        apply_miss_feature_target=False,
                         apply_miss_feature_source=False): 
     
 
     data_dic = np.load(path + 'officehome.npy', allow_pickle=True)
-    data = torch.from_numpy(data_dic.item()[source][0])
+    data = torch.from_numpy(data_dic.item()[source][0]).float()
     label = torch.from_numpy(data_dic.item()[source ][1]).long()
-    if miss_feature == None:
+    if miss_feature == None and apply_miss_feature_target:
         miss_feature = np.random.choice(data.shape[1],nb_missing_feat,replace=False)
         mask = torch.ones(data.size(1), dtype=torch.bool)
         mask[miss_feature] = False
@@ -255,9 +256,10 @@ def get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=32, dr
 
 
     data_dic = np.load(path + 'officehome.npy', allow_pickle=True)
-    data = torch.from_numpy(data_dic.item()[target][0])
+    data = torch.from_numpy(data_dic.item()[target][0]).float()
     label = torch.from_numpy(data_dic.item()[target][1]).long()
-    data = data[:,mask] 
+    if apply_miss_feature_target:
+        data = data[:,mask].float()
 
     target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
 
@@ -276,7 +278,7 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
     
 
     df = pd.read_csv(path + source + '.csv')  
-    data = torch.from_numpy(df.values[:,0:2048])
+    data = torch.from_numpy(df.values[:,0:2048]).float()
     label = torch.from_numpy(df.values[:,2048]).long()
     if miss_feature == None:
         miss_feature = np.random.choice(data.shape[1],nb_missing_feat,replace=False)
@@ -299,7 +301,7 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
     df = pd.read_csv(path + target + '.csv')  
     
 
-    data = torch.from_numpy(df.values[:,0:2048])
+    data = torch.from_numpy(df.values[:,0:2048]).float()
     label = torch.from_numpy(df.values[:,2048]).long()
     data = data[:,mask] 
 
@@ -329,7 +331,7 @@ def get_visda(batch_size=32, drop_last=True,
     train = True
     filename = 'visda-train'+ ''.join(aux)+'.npz'
     res = np.load(path+filename)
-    data = torch.from_numpy(res['X'])
+    data = torch.from_numpy(res['X']).float()
     label = torch.from_numpy(res['y']).long()
     if miss_feature == None:
         miss_feature = np.random.choice(data.shape[1],nb_missing_feat,replace=False)
@@ -350,7 +352,7 @@ def get_visda(batch_size=32, drop_last=True,
 
     filename = 'visda-val'+ ''.join(aux)+'.npz'
     res = np.load(path+filename)
-    data = torch.from_numpy(res['X'])
+    data = torch.from_numpy(res['X']).float()
     label = torch.from_numpy(res['y']).long()
     data = data[:,mask] 
 

@@ -1,0 +1,25 @@
+data:
+  dep_sample: 1
+  nb_class_in_bag: 10
+  bag_size: 50
+  dim: 2
+  variance: 2
+  n_class: 3
+model:
+  dim_latent: 512
+  n_hidden: 512
+bagCSI:
+  lr: 0.001
+  n_epochs: 200
+daLabelOT:  
+  ent_weight: 0.1
+  clf_t_weight: 0.1
+  div_weight: 0.1
+  n_epochs: 200
+  epoch_start_g: 100
+  start_align: 5
+  use_div: False
+  lr: 0.01
+
+
+
