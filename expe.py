@@ -64,7 +64,7 @@ if __name__ == '__main__':
     list_bal_acc_test = []
     
 
-    for iter in range(args.nb_iter):
+    for iter in range(9,args.nb_iter):
         np.random.seed(seed + iter )
         torch.manual_seed(seed + iter)
         torch.cuda.manual_seed_all(seed + iter)
@@ -187,7 +187,8 @@ if __name__ == '__main__':
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
-                                    learning_rate=learning_rate)
+                                    learning_rate=learning_rate,
+                                    verbose=True)
                     model.eval()
                     val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
                     if val_err < val_max:
@@ -202,9 +203,9 @@ if __name__ == '__main__':
 
 
             #%%
-        if args.algo == 'daLabelOT':
+        if args.algo == 'daLabelOTPhi':
             #%%
-            print('DALabelOT')
+            print('DALabelOTPhi')
             from daLabelOT import daLabelOT
             from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
             from utils_local import set_optimizer_data_classifier, set_optimizer_data_classifier_t, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
@@ -244,12 +245,22 @@ if __name__ == '__main__':
                                 bag_loss_weight=bag_loss_weight)
                 set_optimizer_phi(dalabelot, optim.Adam(dalabelot.phi.parameters(), lr=lr, betas=(0.5, 0.999)))
                 set_optimizer_data_classifier_t(dalabelot, optim.Adam(dalabelot.data_classifier_t.parameters(), lr=lr, betas=(0.5, 0.999)))
-                set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr, betas=(0.5, 0.999)))
+                set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=0, betas=(0.5, 0.999)))
                 set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr*10, betas=(0.5, 0.999)))
                 dalabelot.fit()
                 #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
                 #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
+                #%%
+                model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
+                model_s.eval()
+                acc_test, bal_acc_s, cm_test = evaluate_clf(model_s, source_loader,n_classes=n_class)
+                print(f' {bag_loss_weight}  {bal_acc_s:.4f}')
+            
+                #%%
                 model = nn.Sequential(feat_extract_dalabelot,  data_class_t_dalabelot)
+
+
+
                 model.eval()
                 val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
                 if val_err < val_max:
@@ -259,10 +270,85 @@ if __name__ == '__main__':
             
                 print(f' {bag_loss_weight}  {val_max:.4f} {bal_acc_test:.4f}')
 
-            
+            #%%
             print("Accuracy on the test set: ", bal_acc_test)
             #%%
        
+        if args.algo == 'daLabelWD':
+            #%%
+            print('DALabelWD')
+            from daLabelWD import daLabelWD
+            from models import DomainClassifier, DataClassifier, FeatureExtractor
+            from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
+            from utils_local import estimate_source_proportion
+
+
+            cuda = True if torch.cuda.is_available() else False
+            with open(config_file) as file:
+                cfg = yaml.load(file, Loader=yaml.FullLoader)
+
+            ent_weight = cfg['daLabelOT']['ent_weight']
+            clf_t_weight = cfg['daLabelOT']['clf_t_weight']
+            div_weight = cfg['daLabelOT']['div_weight']
+            n_epochs =  cfg['daLabelOT']['n_epochs']            # total number of epochs
+            epoch_start_g = cfg['daLabelOT']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
+            lr = cfg['daLabelOT']['lr']
+            start_align = cfg['daLabelOT']['start_align']
+            use_div = cfg['daLabelOT']['use_div']
+            nblocks = cfg['daLabelOT']['nblocks']
+            proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
+            val_max = n_class
+            it = iter
+            for bag_loss_weight in [10]:
+
+                feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
+                data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
+                domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
+
+                
+                dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader, target_bags,
+                                    cuda=cuda,
+                                n_class=n_class, 
+                                epoch_start_align=start_align, init_lr=lr,
+                                #use_div=use_div,
+                                n_epochs=n_epochs,
+                                #clf_t_weight=clf_t_weight, 
+                                iter=it, 
+                                epoch_start_g=epoch_start_g,
+                                iter_domain_classifier=1,
+                                #div_weight=div_weight,
+                                #data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,
+                                proportion_S=proportion_S,
+                                bag_loss_weight=bag_loss_weight)
+                set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr, betas=(0.5, 0.999)))
+                set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
+                set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
+                dalabelot.fit()
+                #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
+                #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
+                #%%
+                model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
+                model_s.eval()
+                acc_test, bal_acc_s, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
+                print(f' {bag_loss_weight}  {bal_acc_s:.4f}')
+            
+                #%%
+
+
+
+                model.eval()
+                val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                if val_err < val_max:
+                    val_max = val_err
+                    best_bag_loss_weight = bag_loss_weight
+                    acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=False)
+            
+                print(f' {bag_loss_weight}  {val_max:.4f} {bal_acc_test:.4f}')
+
+            #%%
+            print("Accuracy on the test set: ", bal_acc_test)
+
+
 
         list_acc_test.append(acc_test)
         list_bal_acc_test.append(bal_acc_test)

@@ -62,10 +62,10 @@ class daLabelOT(object):
         #self.dataset = dataset
         #self.cluster_param = cluster_param
         #self.prop_factor = 0.5
-        self.optimizer_feat_extractor = optim.SGD(self.feat_extractor.parameters(), lr=0.001)
-        self.optimizer_data_classifier = optim.SGD(self.data_classifier.parameters(), lr=0.001)
-        self.optimizer_data_classifier_t = optim.SGD(self.data_classifier_t.parameters(), lr=0.001)
-        #self.optimizer_domain_classifier = optim.SGD(self.domain_classifier.parameters(), lr=0.01)
+        self.optimizer_feat_extractor = optim.SGD(self.feat_extractor.parameters(), lr=init_lr)
+        self.optimizer_data_classifier = optim.SGD(self.data_classifier.parameters(), lr=init_lr)
+        self.optimizer_data_classifier_t = optim.SGD(self.data_classifier_t.parameters(), lr=init_lr)
+        #self.optimizer_domain_classifier = optim.SGD(self.domain_classifier.parameters(), lr=init_lr)
         self.optimizer_phi = optim.SGD(self.phi.parameters(), lr=0.001)
         self.use_div = use_div
         self.div_weight = div_weight
@@ -195,6 +195,15 @@ class daLabelOT(object):
                         a /= torch.sum(a)
                         b = b.float()
                         a = a.float()
+                        # do PCA of zt_nograd
+                        # from sklearn.decomposition import PCA
+                        # pca = PCA(n_components=20)
+                        # zt_nograd_pca = pca.fit_transform(zt_nograd.detach().cpu().numpy())
+                        # zt_nograd_pca = torch.from_numpy(zt_nograd_pca).float().to(self.device)
+                        # zs_nograd_pca = pca.fit_transform(zs_nograd.detach().cpu().numpy())
+                        # zs_nograd_pca = torch.from_numpy(zs_nograd_pca).float().to(self.device)
+                        # M = dist_torch(zs_nograd_pca,zt_nograd_pca)
+
                         M = dist_torch(zs_nograd,zt_nograd)
                         with torch.no_grad():
                             gamma = ot.emd(a,b,M)
@@ -202,9 +211,7 @@ class daLabelOT(object):
                         zs_map = torch.mm(gamma,zt_nograd)*(1/(gamma@torch.ones(n_2))).reshape(-1,1)
                         # keep only samples that have been mapped (with a >0)
                         ind = torch.where(torch.isnan(zs_map)==False)   
-                        loss = torch.sum(torch.abs(phi_z_s_nograd[ind] - zs_map[ind])**2)                     
-                        
-                        #loss = torch.sum(torch.abs(phi_z_s_nograd - zs_map))
+                        loss = torch.sum(torch.abs(phi_z_s_nograd[ind] - zs_map[ind])**2)                                            
                         self.optimizer_phi.zero_grad()
                         loss.backward()
                         self.optimizer_phi.step()
@@ -227,14 +234,14 @@ class daLabelOT(object):
                     weight = torch.Tensor([proportion_T[kk] / self.proportion_S[kk] for kk in range(self.n_class)])
                     self.criterion = nn.CrossEntropyLoss(weight=weight)
                     clf_t_loss = self.criterion(self.data_classifier_t(phi_z_s.detach()), y_s)
-                    clf_t_loss *= self.clf_t_weight
+                    #clf_t_loss *= self.clf_t_weight
 
                     # bag loss on target domain
                     outputs_target = self.data_classifier_t(z_t)
                     outputs_target = torch.softmax(outputs_target, dim=1)
                     bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(bag_prop)))
-                    print(outputs_target.mean(dim=0), torch.Tensor(bag_prop))
-                    bag_loss *= self.bag_loss_weight
+                    #print(outputs_target.mean(dim=0), torch.Tensor(bag_prop))
+                    #bag_loss *= self.bag_loss_weight
 
                     # Entropy on target
                     output_class_t = self.data_classifier_t(z_t)
@@ -249,13 +256,15 @@ class daLabelOT(object):
                         source_preds = self.data_classifier(z_s)
                         clf_s_loss = self.criterion(source_preds, y_s)
 
-                    loss = clf_s_loss + clf_t_loss + ent_loss + bag_loss
+                    loss = clf_s_loss + clf_t_loss*self.clf_t_weight + ent_loss + bag_loss*self.bag_loss_weight
                     if self.train_g:
                         self.optimizer_feat_extractor.zero_grad()
+                        #self.optimizer_data_classifier.zero_grad()
                     self.optimizer_data_classifier_t.zero_grad()
                     loss.backward()
                     if self.train_g:
                         self.optimizer_feat_extractor.step()
+                        #self.optimizer_data_classifier.step()
                     self.optimizer_data_classifier_t.step()
                 else:
                     set_requires_grad(self.data_classifier, requires_grad=True)
@@ -298,11 +307,11 @@ if __name__ == '__main__':
     from data import get_toy
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # seed = 1
-    # torch.manual_seed(seed)
-    # np.random.seed(seed)
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
+    seed = 1
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     
 
     dim = 2

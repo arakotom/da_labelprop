@@ -34,12 +34,14 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     for epoch in range(num_epochs):
         loss_epoch = 0
+        bag_loss_epoch = 0
+        loss_source_epoch = 0
         for i, (x_train, y_train) in enumerate(source_loader):
             x_train = x_train.to(device).float()
             y_train = y_train.to(device)
             i_bag = np.random.randint(0, len(target_bags))
+            
             x_target = target_bags[i_bag]['data'].to(device).float()
-            #y_target = torch.tensor([i_bag]*x_target.size(0)).to(device)
             y_target_prop = torch.tensor(target_bags[i_bag]['prop']).to(device)
 
             # source loss
@@ -68,8 +70,14 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
             loss.backward()
             optimizer.step()
             loss_epoch += loss.item()
+            loss_source_epoch += loss_source.item()
+            bag_loss_epoch += loss_bag.item()           
+        
+        loss_epoch /= len(source_loader)
+        bag_loss_epoch /= len(source_loader)
+        loss_source_epoch /= len(source_loader)
         if verbose:
-            print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss_epoch:.4f} loss_source: {loss_source:.4f} loss_bag: {loss_bag:.4f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss_epoch:.4f} loss_source: {loss_source_epoch:.4f} loss_bag: {bag_loss_epoch:.4f}')
 
 
 

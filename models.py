@@ -89,8 +89,8 @@ class DomainClassifier(nn.Module):
 class FeatureExtractor(nn.Module):
     def __init__(self, input_dim=100,n_hidden=256,output_dim=256):
         super(FeatureExtractor, self).__init__()
-        self.fc1 = nn.Linear(input_dim, n_hidden, bias=True)
-        self.fc2 = nn.Linear(n_hidden, output_dim,bias=True)
+        self.fc1 = nn.Linear(input_dim, n_hidden)
+        self.fc2 = nn.Linear(n_hidden, output_dim)
         self.activation = nn.LeakyReLU(0.2)
         self.dropout = nn.Dropout(p=0.1)
 
