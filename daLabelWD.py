@@ -222,11 +222,11 @@ class daLabelWD(object):
                     # Bag loss
                     outputs_target = self.data_classifier(z[x_s.shape[0]:])
                     outputs_target = torch.softmax(outputs_target, dim=1)
-                    bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T)))
+                    bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T).to(self.device)))
 
 
 
-                    loss = clf_s_loss + 0*dist_loss + bag_loss*self.bag_loss_weight
+                    loss = clf_s_loss + dist_loss + bag_loss*self.bag_loss_weight
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
                     loss.backward()

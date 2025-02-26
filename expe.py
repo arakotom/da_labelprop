@@ -182,7 +182,7 @@ if __name__ == '__main__':
             num_epochs = cfg['bagCSI']['n_epochs']
             val_max = n_class
 
-            for param_bag in [10]:
+            for param_bag in [10,20,50]:
                 for param_da in [0]:
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
@@ -220,7 +220,8 @@ if __name__ == '__main__':
             clf_t_weight = cfg['daLabelOT']['clf_t_weight']
             div_weight = cfg['daLabelOT']['div_weight']
             n_epochs =  cfg['daLabelOT']['n_epochs']            # total number of epochs
-            epoch_start_g = cfg['daLabelOT']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
+            epoch_start_g = cfg['daLabelOT']['epoch_start_g']   #args.epoch_start_g  # epoch to start retrain the feature extractor
+            epoch_train_phi = cfg['daLabelOT']['epoch_train_phi']
             lr = cfg['daLabelOT']['lr']
             start_align = cfg['daLabelOT']['start_align']
             use_div = cfg['daLabelOT']['use_div']
@@ -233,8 +234,10 @@ if __name__ == '__main__':
                 feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
                 data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
                 data_class_t_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
+                domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
                 phi_dalabelot = ResidualPhi(nblocks=nblocks, dim= dim_latent, nl_layer='relu', norm_layer='batch1d', n_branches=1)
                 dalabelot = daLabelOT(feat_extract_dalabelot, data_class_dalabelot, phi_dalabelot, source_loader, target_bags,
+                                    domain_classifier=domain_class_dalabelot,
                                     cuda=cuda,
                                 n_class=n_class, 
                                 epoch_start_align=start_align, init_lr=lr,
@@ -242,15 +245,17 @@ if __name__ == '__main__':
                                 clf_t_weight=clf_t_weight, iter=it, epoch_start_g=epoch_start_g,
                                 div_weight=div_weight,
                                 data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,proportion_S=proportion_S,
-                                bag_loss_weight=bag_loss_weight)
-                set_optimizer_phi(dalabelot, optim.Adam(dalabelot.phi.parameters(), lr=lr, betas=(0.5, 0.999)))
+                                bag_loss_weight=bag_loss_weight, epoch_train_phi=epoch_train_phi,
+                                do_adv=False)
+                set_optimizer_phi(dalabelot, optim.Adam(dalabelot.phi.parameters(), lr=0.001, betas=(0.5, 0.999)))
                 set_optimizer_data_classifier_t(dalabelot, optim.Adam(dalabelot.data_classifier_t.parameters(), lr=lr, betas=(0.5, 0.999)))
                 set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=0, betas=(0.5, 0.999)))
                 set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr*10, betas=(0.5, 0.999)))
+                set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
                 dalabelot.fit()
                 #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
                 #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
-                #%%
+            
                 model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
                 model_s.eval()
                 acc_test, bal_acc_s, cm_test = evaluate_clf(model_s, source_loader,n_classes=n_class)
@@ -287,19 +292,19 @@ if __name__ == '__main__':
             with open(config_file) as file:
                 cfg = yaml.load(file, Loader=yaml.FullLoader)
 
-            ent_weight = cfg['daLabelOT']['ent_weight']
-            clf_t_weight = cfg['daLabelOT']['clf_t_weight']
-            div_weight = cfg['daLabelOT']['div_weight']
-            n_epochs =  cfg['daLabelOT']['n_epochs']            # total number of epochs
-            epoch_start_g = cfg['daLabelOT']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
-            lr = cfg['daLabelOT']['lr']
-            start_align = cfg['daLabelOT']['start_align']
-            use_div = cfg['daLabelOT']['use_div']
-            nblocks = cfg['daLabelOT']['nblocks']
+            ent_weight = cfg['daLabelWD']['ent_weight']
+            clf_t_weight = cfg['daLabelWD']['clf_t_weight']
+            div_weight = cfg['daLabelWD']['div_weight']
+            n_epochs =  cfg['daLabelWD']['n_epochs']            # total number of epochs
+            epoch_start_g = cfg['daLabelWD']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
+            lr = cfg['daLabelWD']['lr']
+            start_align = cfg['daLabelWD']['start_align']
+            use_div = cfg['daLabelWD']['use_div']
+            grad_scale = cfg['daLabelWD']['grad_scale']
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
             val_max = n_class
             it = iter
-            for bag_loss_weight in [10]:
+            for bag_loss_weight in [10,20,50]:
 
                 feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
                 data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
@@ -310,12 +315,13 @@ if __name__ == '__main__':
                                     cuda=cuda,
                                 n_class=n_class, 
                                 epoch_start_align=start_align, init_lr=lr,
+                                grad_scale=grad_scale,
                                 #use_div=use_div,
                                 n_epochs=n_epochs,
                                 #clf_t_weight=clf_t_weight, 
                                 iter=it, 
                                 epoch_start_g=epoch_start_g,
-                                iter_domain_classifier=1,
+                                iter_domain_classifier=10,
                                 #div_weight=div_weight,
                                 #data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,
                                 proportion_S=proportion_S,
@@ -326,18 +332,17 @@ if __name__ == '__main__':
                 dalabelot.fit()
                 #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
                 #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
-                #%%
+                # #%%
+                model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
+                # model_s.eval()
+                # acc_test, bal_acc_test, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
+                # print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
+            
+
+
                 model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
                 model_s.eval()
-                acc_test, bal_acc_s, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
-                print(f' {bag_loss_weight}  {bal_acc_s:.4f}')
-            
-                #%%
-
-
-
-                model.eval()
-                val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                val_err = error_on_bag_prop(model_s,val_bags,n_class=n_class)
                 if val_err < val_max:
                     val_max = val_err
                     best_bag_loss_weight = bag_loss_weight
