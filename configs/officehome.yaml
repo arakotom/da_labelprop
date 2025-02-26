@@ -19,7 +19,20 @@ daLabelOT:
   use_div: False
   lr: 0.001
   lr_phi: 0.001
-  nblocks: 1
+  #nblocks: 1
+daLabelWD:  
+  #ent_weight: 0.
+  clf_t_weight: 0
+  #div_weight: 0.
+  n_epochs: 200
+  epoch_start_g: 0
+  start_align: 0
+  #use_div: False
+  #grad_scale: 1
+  dist_loss_weight: 0.0001
+  lr: 0.001
+  lr_phi: 0.001
+  #nblocks: 1
 
 
 

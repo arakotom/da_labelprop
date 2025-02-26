@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from utils_local import evaluate_data_classifier, loop_iterable, set_requires_grad, gradient_penalty, format_list, \
     compute_diff_label, set_lr
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class daLabelWD(object):
     def __init__(self, feat_extractor, data_classifier, domain_classifier, source_data_loader, target_bags,
@@ -13,12 +13,13 @@ class daLabelWD(object):
                  epoch_start_align=11, cluster_param="ward", epoch_start_g=30, n_epochs=100, gamma=10, init_lr=0.001, iter=0,
                  iter_domain_classifier=10, factor_f=1, lr_g_weight=1.0, lr_f_weight=1.0, lr_d_weight=1.0, factor_g=1.0,
                  eval_data_loader=None, proportion_T_gt=None, setting=10, beta_ratio=-1, proportion_S=None,
-                 bag_loss_weight=1):
+                 bag_loss_weight=1,
+                 dist_loss_weight=1):
         self.feat_extractor = feat_extractor
         self.data_classifier = data_classifier
-        self.setting = setting
+        #self.setting = setting
         self.iter = iter
-        self.proportion_T_gt = proportion_T_gt
+        #self.proportion_T_gt = proportion_T_gt
         self.domain_classifier = domain_classifier
         self.source_data_loader = source_data_loader
         self.target_bags = target_bags
@@ -28,29 +29,30 @@ class daLabelWD(object):
         self.lr_f_weight = lr_f_weight
         self.lr_d_weight = lr_d_weight
         self.proportion_S = proportion_S
-        self.cuda = cuda
+        self.cuda = True if torch.cuda.is_available() else False
         self.n_epochs = n_epochs
         self.criterion = nn.CrossEntropyLoss()
         self.epoch_start_align = epoch_start_align
-        self.epoch_start_g = epoch_start_g
+        #self.epoch_start_g = epoch_start_g
         self.iter_domain_classifier = iter_domain_classifier
         self.gamma = gamma
-        self.grad_scale = grad_scale
-        self.proportion_method = "confusion"
+        #self.grad_scale = grad_scale
+        #self.proportion_method = "confusion"
         self.bag_loss_weight = bag_loss_weight
+        self.dist_loss_weight = dist_loss_weight
         #self.logger = logger
         #self.cluster_step = compute_cluster_every
         self.init_lr = init_lr
         self.ts = ts
         #self.dataset = dataset
-        self.cluster_param = cluster_param
-        self.prop_factor = 0.5
-        self.factor_f = factor_f
-        self.factor_g = factor_g
+        #self.cluster_param = cluster_param
+        #self.prop_factor = 0.5
+        #self.factor_f = factor_f
+        #self.factor_g = factor_g
         self.optimizer_feat_extractor = optim.SGD(self.feat_extractor.parameters(), lr=0.001)
         self.optimizer_data_classifier = optim.SGD(self.data_classifier.parameters(), lr=0.001)
         self.optimizer_domain_classifier = optim.SGD(self.domain_classifier.parameters(), lr=0.01)
-        self.beta_ratio = beta_ratio
+        #self.beta_ratio = beta_ratio
 
     def fit(self):
         if self.cuda:
@@ -66,9 +68,9 @@ class daLabelWD(object):
         self.print_start = True
         self.print_start_g = True
 
-        proportion_T = torch.ones(self.n_class) / self.n_class
-        if self.beta_ratio == -1:
-            self.hist_proportion = proportion_T.numpy()
+        # proportion_T = torch.ones(self.n_class) / self.n_class
+        # if self.beta_ratio == -1:
+        #     self.hist_proportion = proportion_T.numpy()
 
         # Train latent space
         #self.logger.info("--Initialize f, g--")
@@ -142,8 +144,8 @@ class daLabelWD(object):
                     set_lr(self.optimizer_data_classifier, lr * self.lr_f_weight)
                     set_lr(self.optimizer_feat_extractor, lr * self.lr_g_weight)
 
-                    if self.beta_ratio == -1:
-                        source_weight_un = torch.zeros((y_s.size(0), 1)).to(self.device)
+                    #if self.beta_ratio == -1:
+                    source_weight_un = torch.zeros((y_s.size(0), 1)).to(self.device)
                     Ns_class = torch.zeros((self.n_class, 1)).to(self.device)
                     Nt_class = torch.zeros((self.n_class, 1)).to(self.device)
                     for j in range(self.n_class):
@@ -211,13 +213,12 @@ class daLabelWD(object):
                     #self.criterion = nn.CrossEntropyLoss(weight=torch.FloatTensor(torch.Tensor(proportion_T) / self.proportion_S).to(self.device))
                     # there is no label shift in  the target data, just the bag that have different proportion
                     self.criterion = nn.CrossEntropyLoss()
-                    
                     clf_s_loss = self.criterion(self.data_classifier(z[:x_s.shape[0]]), y_s)
 
                     # Alignment
                     critic = self.domain_classifier(z)
                     critic_s, critic_t = critic[:x_s.shape[0]], critic[x_s.shape[0]:]
-                    dist_loss = self.grad_scale * ((critic_s * source_weight_un.detach()).sum() - critic_t.mean())
+                    dist_loss = ((critic_s * source_weight_un.detach()).sum() - critic_t.mean())
 
                     # Bag loss
                     outputs_target = self.data_classifier(z[x_s.shape[0]:])
@@ -226,7 +227,7 @@ class daLabelWD(object):
 
 
 
-                    loss = clf_s_loss + dist_loss + bag_loss*self.bag_loss_weight
+                    loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
                     loss.backward()

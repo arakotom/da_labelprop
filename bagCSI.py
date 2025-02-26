@@ -30,6 +30,7 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
                     learning_rate=0.001,
                     verbose=False):
     model.train()
+    model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     for epoch in range(num_epochs):

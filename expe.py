@@ -292,15 +292,16 @@ if __name__ == '__main__':
             with open(config_file) as file:
                 cfg = yaml.load(file, Loader=yaml.FullLoader)
 
-            ent_weight = cfg['daLabelWD']['ent_weight']
+            #ent_weight = cfg['daLabelWD']['ent_weight']
             clf_t_weight = cfg['daLabelWD']['clf_t_weight']
-            div_weight = cfg['daLabelWD']['div_weight']
+            #div_weight = cfg['daLabelWD']['div_weight']
             n_epochs =  cfg['daLabelWD']['n_epochs']            # total number of epochs
             epoch_start_g = cfg['daLabelWD']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
             lr = cfg['daLabelWD']['lr']
             start_align = cfg['daLabelWD']['start_align']
-            use_div = cfg['daLabelWD']['use_div']
-            grad_scale = cfg['daLabelWD']['grad_scale']
+            #use_div = cfg['daLabelWD']['use_div']
+            #grad_scale = cfg['daLabelWD']['grad_scale']
+            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight']
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
             val_max = n_class
             it = iter
@@ -311,21 +312,24 @@ if __name__ == '__main__':
                 domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
 
                 
-                dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader, target_bags,
-                                    cuda=cuda,
+                dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader,
+                                       target_bags,
+                                #    cuda=cuda,
                                 n_class=n_class, 
-                                epoch_start_align=start_align, init_lr=lr,
-                                grad_scale=grad_scale,
+                                epoch_start_align=start_align, 
+                                init_lr=lr,
+                                #grad_scale=grad_scale,
                                 #use_div=use_div,
                                 n_epochs=n_epochs,
                                 #clf_t_weight=clf_t_weight, 
                                 iter=it, 
                                 epoch_start_g=epoch_start_g,
-                                iter_domain_classifier=10,
+                                iter_domain_classifier=2,
                                 #div_weight=div_weight,
                                 #data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,
                                 proportion_S=proportion_S,
-                                bag_loss_weight=bag_loss_weight)
+                                bag_loss_weight=bag_loss_weight,
+                                dist_loss_weight=dist_loss_weight,)
                 set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr, betas=(0.5, 0.999)))
                 set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
                 set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))

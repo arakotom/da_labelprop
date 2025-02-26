@@ -91,6 +91,6 @@ def error_on_bag_prop(model,val_bags,n_class=10):
         _, predicted = torch.max(outputs.data, 1)
         total = data.size(0)
         prop_pred = torch.bincount(predicted,minlength=n_class).float()/total
-        acc = torch.sum(torch.abs(prop_pred - torch.Tensor(prop))).item()
+        acc = torch.sum(torch.abs(prop_pred - torch.Tensor(prop).to(device))).item()
         val_accur.append(acc)
     return torch.Tensor(val_accur).mean().item()
