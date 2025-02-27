@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -162,8 +162,11 @@ if __name__ == '__main__':
 
         if args.algo == 'bagCSI':
             pass
-        if args.algo == 'daLabelOT':
-            pass
+        if args.algo == 'daLabelWD':
+            filesave += f"-dist_loss_weight-{cfg['daLabelWD']['dist_loss_weight']:2.6f}"
+            filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
+            filesave += f"-epoch_start_g-{cfg['daLabelWD']['epoch_start_g']}"
+            filesave += f"-lr-{cfg['daLabelWD']['lr']:2.4f}"
         if args.data == 'toy':
             filesave += f"-dim-{dim}-variance-{variance}"
         filesave += f'-seed-{seed}'
@@ -194,7 +197,7 @@ if __name__ == '__main__':
             val_max = n_class
 
             for param_bag in [10,20,50]:
-                for param_da in [0]:
+                for param_da in [1]:
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
@@ -298,7 +301,7 @@ if __name__ == '__main__':
             from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
             from utils_local import estimate_source_proportion
 
-            if 0:
+            if 1:
                 cuda = True if torch.cuda.is_available() else False
                 with open(config_file) as file:
                     cfg = yaml.load(file, Loader=yaml.FullLoader)
@@ -316,7 +319,7 @@ if __name__ == '__main__':
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
             val_max = n_class
             it = iter
-            for bag_loss_weight in [10,20,50]:
+            for bag_loss_weight in [5000]:
 
                 feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
                 data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)

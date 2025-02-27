@@ -36,13 +36,15 @@ daLabelOT:
   lr_phi: 0.001
 daLabelWD:  
   clf_t_weight: 0
-  n_epochs: 200
+  n_epochs: 400
   epoch_start_g: 0
-  start_align: 0
-  dist_loss_weight: 0.000
+  start_align: 5
+  dist_loss_weight: 0.00001
   lr: 0.001
   lr_phi: 0.001
-  iter_domain_classifier: 2
+  iter_domain_classifier: 1
 
 
-
+#  beaucoup d'iteration n_epochs
+# - un peu d'adaptation 
+# - aligner plus tard start_align
