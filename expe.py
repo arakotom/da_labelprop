@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    sys.argv = ['']
+    #sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -33,9 +33,12 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--nb_iter', type=int, default=10)
     parser.add_argument('--data', type=str, default='officehome')
     parser.add_argument('--algo', type=str, default='bagCSI')
+    parser.add_argument('--source_target', type=int, default=0)
+    parser.add_argument('--bag_size', type=int, default=50)
+    parser.add_argument('--nb_iter', type=int, default=10)
+
     args = parser.parse_args()
     config_file = f"./configs/{args.data}.yaml"
     with open(config_file) as file:
@@ -58,13 +61,13 @@ if __name__ == '__main__':
     nb_class_in_bag = cfg['data']['n_class']
     bag_size = cfg['data']['bag_size']
 
-    print(args.expe_name,data)
+    print(args.expe_name, data)
 
     list_acc_test = []
     list_bal_acc_test = []
     
 
-    for iter in range(9,args.nb_iter):
+    for iter in range(args.nb_iter):
         np.random.seed(seed + iter )
         torch.manual_seed(seed + iter)
         torch.cuda.manual_seed_all(seed + iter)
@@ -104,15 +107,24 @@ if __name__ == '__main__':
             else:
                 savedir = 'results/visda-' + args.expe_name
         if data == 'officehome':
-            n_class = 65
-            dim = 2048
-            dim_latent = 512
-            n_hidden = 512
+            onfig_file = './configs/officehome.yaml'
+            with open(config_file) as file:
+                cfg = yaml.load(file, Loader=yaml.FullLoader)
+            source = cfg['data']['files'][args.source_target][0]
+            target = cfg['data']['files'][args.source_target][1]
+            bag_size = cfg['data']['bag_size']
+            nb_class_in_bag = cfg['data']['nb_class_in_bag']
+            n_class = cfg['data']['n_class']
+            dim = cfg['data']['dim']
+            dim_latent = cfg['model']['dim_latent']
+            n_hidden = cfg['model']['n_hidden']
             use_div = True
-            source_loader, target_bags = get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=128, drop_last=True,
+            print(source, target)
+            source_loader, target_bags = get_officehome(source = source, target = target, batch_size=128,
+                                                         drop_last=True,
                          nb_missing_feat = None,
-                        nb_class_in_bag = 10,
-                        bag_size = 50)
+                        nb_class_in_bag = nb_class_in_bag,
+                        bag_size = bag_size )
 
             if args.expe_name == "":
                 savedir = 'results/officehome'
@@ -136,6 +148,8 @@ if __name__ == '__main__':
                 savedir = 'results/office31-' + args.expe_name
 
 
+        n_class = cfg['data']['n_class']
+
         nb_val = len(target_bags)//10
         val_bags = target_bags[:nb_val]
         target_bags = target_bags[nb_val:]
@@ -143,16 +157,13 @@ if __name__ == '__main__':
         X_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
         test_loader = create_data_loader(X_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
-        filesave = f"data-{data}-algo-{algo}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
+        filesave = f"data-{data}-algo-{algo}-st_{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
          
 
         if args.algo == 'bagCSI':
             pass
         if args.algo == 'daLabelOT':
             pass
-
-
-
         if args.data == 'toy':
             filesave += f"-dim-{dim}-variance-{variance}"
         filesave += f'-seed-{seed}'
@@ -211,10 +222,10 @@ if __name__ == '__main__':
             from utils_local import set_optimizer_data_classifier, set_optimizer_data_classifier_t, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
             from utils_local import estimate_source_proportion
 
-
-            cuda = True if torch.cuda.is_available() else False
-            with open(config_file) as file:
-                cfg = yaml.load(file, Loader=yaml.FullLoader)
+            if 0:
+                cuda = True if torch.cuda.is_available() else False
+                with open(config_file) as file:
+                    cfg = yaml.load(file, Loader=yaml.FullLoader)
 
             ent_weight = cfg['daLabelOT']['ent_weight']
             clf_t_weight = cfg['daLabelOT']['clf_t_weight']
@@ -287,10 +298,10 @@ if __name__ == '__main__':
             from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
             from utils_local import estimate_source_proportion
 
-
-            cuda = True if torch.cuda.is_available() else False
-            with open(config_file) as file:
-                cfg = yaml.load(file, Loader=yaml.FullLoader)
+            if 0:
+                cuda = True if torch.cuda.is_available() else False
+                with open(config_file) as file:
+                    cfg = yaml.load(file, Loader=yaml.FullLoader)
 
             #ent_weight = cfg['daLabelWD']['ent_weight']
             clf_t_weight = cfg['daLabelWD']['clf_t_weight']
@@ -314,19 +325,13 @@ if __name__ == '__main__':
                 
                 dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader,
                                        target_bags,
-                                #    cuda=cuda,
                                 n_class=n_class, 
                                 epoch_start_align=start_align, 
                                 init_lr=lr,
-                                #grad_scale=grad_scale,
-                                #use_div=use_div,
                                 n_epochs=n_epochs,
-                                #clf_t_weight=clf_t_weight, 
                                 iter=it, 
                                 epoch_start_g=epoch_start_g,
-                                iter_domain_classifier=2,
-                                #div_weight=div_weight,
-                                #data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,
+                                iter_domain_classifier=cfg['daLabelWD']['iter_domain_classifier'],
                                 proportion_S=proportion_S,
                                 bag_loss_weight=bag_loss_weight,
                                 dist_loss_weight=dist_loss_weight,)

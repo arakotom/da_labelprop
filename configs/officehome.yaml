@@ -3,6 +3,21 @@ data:
   nb_class_in_bag: 10
   bag_size: 50
   n_class: 65
+  dim: 2048
+  files:
+    - ['Art_Art', 'Art_Clipart']
+    - ['Art_Art', 'Art_Product']
+    - ['Art_Art', 'Art_RealWorld']
+    - ['Clipart_Clipart', 'Clipart_Art']
+    - ['Clipart_Clipart', 'Clipart_Product']
+    - ['Clipart_Clipart', 'Clipart_RealWorld']
+    - ['Product_Product', 'Product_Art']
+    - ['Product_Product', 'Product_Clipart']
+    - ['Product_Product', 'Product_RealWorld']
+    - ['RealWorld_RealWorld', 'RealWorld_Art']
+    - ['RealWorld_RealWorld', 'RealWorld_Clipart']
+    - ['RealWorld_RealWorld', 'RealWorld_Product']
+    
 model:
   dim_latent: 128
   n_hidden: 128
@@ -19,20 +34,15 @@ daLabelOT:
   use_div: False
   lr: 0.001
   lr_phi: 0.001
-  #nblocks: 1
 daLabelWD:  
-  #ent_weight: 0.
   clf_t_weight: 0
-  #div_weight: 0.
   n_epochs: 200
   epoch_start_g: 0
   start_align: 0
-  #use_div: False
-  #grad_scale: 1
-  dist_loss_weight: 0.0001
+  dist_loss_weight: 0.000
   lr: 0.001
   lr_phi: 0.001
-  #nblocks: 1
+  iter_domain_classifier: 2
 
 
 

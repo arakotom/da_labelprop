@@ -272,7 +272,9 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
                         bag_size = 50,
                         path = './data/office/office31_resnet50/',
                         miss_feature=None,
-                        apply_miss_feature_source=False): 
+                        apply_miss_feature_source=False,
+                        apply_miss_feature_target=False,
+                        ): 
     
 
     
@@ -303,7 +305,8 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
 
     data = torch.from_numpy(df.values[:,0:2048]).float()
     label = torch.from_numpy(df.values[:,2048]).long()
-    data = data[:,mask] 
+    if apply_miss_feature_target:
+        data = data[:,mask].float()
 
     target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
 
@@ -414,7 +417,6 @@ def get_toy(batch_size=32, drop_last=True,
 if __name__ == "__main__":
 
 
-
     if  1:
         source = 'amazon_amazon'
         target = 'amazon_dslr'
@@ -425,6 +427,8 @@ if __name__ == "__main__":
     if  0:
 
         source_loader, target_bags = get_toy(apply_miss_feature_source=True)
+    if 0:
+        source_loader, target_bags = get_officehome(source = 'Art_Art', target = 'Art_Clipart',apply_miss_feature_target=True)
 
 
     print('source_loader',source_loader.dataset.tensors[0].shape)
@@ -434,5 +438,38 @@ if __name__ == "__main__":
         s += bag['data'].shape[0]
     print(s/len(target_bags))
 
+    #%%
+    # check the config file
+    if 1:   
+        import yaml
+        config_file = './configs/officehome.yaml'
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        for (source,target) in cfg['data']['files']:
+            source_loader, target_bags = get_officehome(source = source, target = target,apply_miss_feature_target=True)
 
-# %%
+            print('source_loader', source, source_loader.dataset.tensors[0].shape)
+            print('target_bags',target, target_bags[0]['data'].shape)
+    if 1:   
+            import yaml
+            config_file = './configs/office31.yaml'
+            with open(config_file) as file:
+                cfg = yaml.load(file, Loader=yaml.FullLoader)
+            for (source,target) in cfg['data']['files']:
+                source_loader, target_bags = get_office31(source = source, target = target,apply_miss_feature_target=True)
+
+                print('source_loader', source, source_loader.dataset.tensors[0].shape)
+                print('target_bags',target, target_bags[0]['data'].shape)
+
+
+
+
+
+
+
+    # %%
+    path = './data/office/'
+    data_dic = np.load(path + 'officehome.npy', allow_pickle=True)
+    len(data_dic.item().keys())
+
+    # %%
