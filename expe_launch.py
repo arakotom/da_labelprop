@@ -18,7 +18,8 @@ current_path = os.getcwd()
 data = 'office31'
 list_problems = [0,1,2,3]
 algo_list = ['bagCSI','daLabelWD']
-n_param = 1
+algo_list = ['bagCSI']
+n_param_list = [1, 4]
 list_bag_size = [50]
 for i_p in range(n_param):
     for bag_size in list_bag_size:

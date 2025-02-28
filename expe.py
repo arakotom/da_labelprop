@@ -202,10 +202,10 @@ if __name__ == '__main__':
             input_size = dim
             learning_rate = cfg['bagCSI']['lr']
             num_epochs = cfg['bagCSI']['n_epochs']
+            param_da = cfg['bagCSI']['param_da']
             val_max = n_class
 
             for param_bag in [1,5,10,20,50]:
-                for param_da in [1]:
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
