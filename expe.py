@@ -119,6 +119,9 @@ if __name__ == '__main__':
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
+            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
+
+            param_da = cfg['bagCSI']['param_da'][args.i_param]
             use_div = True
             print(source, target)
             source_loader, target_bags = get_officehome(source = source, target = target, batch_size=128,

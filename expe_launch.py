@@ -18,6 +18,9 @@ current_path = os.getcwd()
 data = 'officehome'
 n_param = 3
 
+
+# data = 'office31'
+# n_param = 5
 list_problems = [0,1,2,3,4,5]
 algo_list = ['bagCSI','daLabelWD']
 #algo_list = ['bagCSI']
