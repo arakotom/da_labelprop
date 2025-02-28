@@ -16,9 +16,8 @@ args = parser.parse_args()
 seed = args.seed
 current_path = os.getcwd()
 data = 'office31'
-list_problems = [0,1,2,3,4,5]
+list_problems = [0,1,2,3]
 algo_list = ['bagCSI','daLabelWD']
-algo_list = ['daLabelWD']
 n_param = 1
 list_bag_size = [50]
 for i_p in range(n_param):
@@ -38,7 +37,7 @@ for i_p in range(n_param):
                 else:
                     os.system("rm slurm*.out")
                     print('sbatch tasks')
-                    command = f"sbatch expe_iid_script.slurm {data:} {algo:} {bag_size} {seed:} &"
+                    command = f"sbatch expe.slurm {data:} {algo:} {bag_size} {problem:} {i_p:} {seed:} &"
                     os.system(command)
 
 # %%
