@@ -16,9 +16,9 @@ args = parser.parse_args()
 seed = args.seed
 current_path = os.getcwd()
 data = 'officehome'
-list_problems = [0]
-#algo_list = ['bagCSI','daLabelWD']
-algo_list = ['daLabelWD']
+list_problems = [1,2]
+algo_list = ['bagCSI','daLabelWD']
+#algo_list = ['daLabelWD']
 
 list_bag_size = [50]
 for bag_size in list_bag_size:
@@ -31,7 +31,7 @@ for bag_size in list_bag_size:
                 command = f"nohup  python -u expe.py  --data {data:}  --algo {algo:} --seed {seed:} "
                 command += f"--bag_size {bag_size:} --source_target {problem:} "
                 command += specific_command
-                command += f"  > ./out/out_bs_{data}_{algo}_{problem}_{bag_size}_{seed}.log &"
+                command += f"  > ./out/out_bs_{data}_{algo}_{problem}_{bag_size}_{seed}.log"
 
                 os.system(command)
             else:

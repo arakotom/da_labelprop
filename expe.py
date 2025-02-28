@@ -33,11 +33,11 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='officehome')
+    parser.add_argument('--data', type=str, default='office31')
     parser.add_argument('--algo', type=str, default='bagCSI')
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
-    parser.add_argument('--nb_iter', type=int, default=10)
+    parser.add_argument('--nb_iter', type=int, default=5)
 
     args = parser.parse_args()
     config_file = f"./configs/{args.data}.yaml"
@@ -307,10 +307,10 @@ if __name__ == '__main__':
                     cfg = yaml.load(file, Loader=yaml.FullLoader)
 
             #ent_weight = cfg['daLabelWD']['ent_weight']
-            clf_t_weight = cfg['daLabelWD']['clf_t_weight']
+            # clf_t_weight = cfg['daLabelWD']['clf_t_weight']
             #div_weight = cfg['daLabelWD']['div_weight']
             n_epochs =  cfg['daLabelWD']['n_epochs']            # total number of epochs
-            epoch_start_g = cfg['daLabelWD']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
+            #epoch_start_g = cfg['daLabelWD']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
             lr = cfg['daLabelWD']['lr']
             start_align = cfg['daLabelWD']['start_align']
             #use_div = cfg['daLabelWD']['use_div']
@@ -319,7 +319,7 @@ if __name__ == '__main__':
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
             val_max = n_class
             it = iter
-            for bag_loss_weight in [5000]:
+            for bag_loss_weight in [500]:
 
                 feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
                 data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
@@ -333,7 +333,6 @@ if __name__ == '__main__':
                                 init_lr=lr,
                                 n_epochs=n_epochs,
                                 iter=it, 
-                                epoch_start_g=epoch_start_g,
                                 iter_domain_classifier=cfg['daLabelWD']['iter_domain_classifier'],
                                 proportion_S=proportion_S,
                                 bag_loss_weight=bag_loss_weight,
