@@ -24,6 +24,10 @@ model:
 bagCSI:
   lr: 0.001
   n_epochs: 200
+  param_da:
+    - 10
+    - 1
+    - 0.1
 daLabelOT:  
   ent_weight: 0.
   clf_t_weight: 0
