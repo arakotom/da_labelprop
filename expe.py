@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    sys.argv = ['']
+    #sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=5)
+    parser.add_argument('--i_param', type=int, default=0)
 
     args = parser.parse_args()
     config_file = f"./configs/{args.data}.yaml"
@@ -132,15 +133,19 @@ if __name__ == '__main__':
                 savedir = 'results/officehome-' + args.expe_name
         
         if data == 'office31':
-            n_class = 31
-            dim = 2048
-            dim_latent = 512
-            n_hidden = 512
-            use_div = True
-            source_loader, target_bags = get_office31(source = "amazon_amazon", target = "amazon_dslr", batch_size=128, drop_last=True,
+            source = cfg['data']['files'][args.source_target][0]
+            target = cfg['data']['files'][args.source_target][1]
+            bag_size = cfg['data']['bag_size']
+            nb_class_in_bag = cfg['data']['nb_class_in_bag']
+            n_class = cfg['data']['n_class']
+            dim = cfg['data']['dim']
+            dim_latent = cfg['model']['dim_latent']
+            n_hidden = cfg['model']['n_hidden']
+            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
+            source_loader, target_bags = get_office31(source = source, target = target, batch_size=128, drop_last=True,
                         nb_missing_feat = None,
-                        nb_class_in_bag = 10,
-                        bag_size = 50)
+                        nb_class_in_bag = nb_class_in_bag,
+                        bag_size = bag_size )
 
             if args.expe_name == "":
                 savedir = 'results/office31'
@@ -149,23 +154,26 @@ if __name__ == '__main__':
 
 
         n_class = cfg['data']['n_class']
-
-        nb_val = len(target_bags)//10
-        val_bags = target_bags[:nb_val]
-        target_bags = target_bags[nb_val:]
+        if len(target_bags) > 10:
+            nb_val = len(target_bags)//10
+            val_bags = target_bags[:nb_val]
+            target_bags = target_bags[nb_val:]
+        else:
+            val_bags = target_bags[-2:]
+            target_bags = target_bags[:-2:]
       
         X_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
         test_loader = create_data_loader(X_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
-        filesave = f"data-{data}-algo-{algo}-st_{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
+        filesave = f"data-{data}-algo-{algo}-st-{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
          
 
         if args.algo == 'bagCSI':
             pass
         if args.algo == 'daLabelWD':
-            filesave += f"-dist_loss_weight-{cfg['daLabelWD']['dist_loss_weight']:2.6f}"
+            filesave += f"-dist_loss_weight-{dist_loss_weight:2.6f}"
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
-            filesave += f"-epoch_start_g-{cfg['daLabelWD']['epoch_start_g']}"
+            filesave += f"-start_align-{cfg['daLabelWD']['start_align']}"
             filesave += f"-lr-{cfg['daLabelWD']['lr']:2.4f}"
         if args.data == 'toy':
             filesave += f"-dim-{dim}-variance-{variance}"
@@ -196,7 +204,7 @@ if __name__ == '__main__':
             num_epochs = cfg['bagCSI']['n_epochs']
             val_max = n_class
 
-            for param_bag in [10,20,50]:
+            for param_bag in [1,5,10,20,50]:
                 for param_da in [1]:
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
@@ -306,60 +314,53 @@ if __name__ == '__main__':
                 with open(config_file) as file:
                     cfg = yaml.load(file, Loader=yaml.FullLoader)
 
-            #ent_weight = cfg['daLabelWD']['ent_weight']
-            # clf_t_weight = cfg['daLabelWD']['clf_t_weight']
-            #div_weight = cfg['daLabelWD']['div_weight']
+
             n_epochs =  cfg['daLabelWD']['n_epochs']            # total number of epochs
-            #epoch_start_g = cfg['daLabelWD']['epoch_start_g'] #args.epoch_start_g  # epoch to start retrain the feature extractor
             lr = cfg['daLabelWD']['lr']
             start_align = cfg['daLabelWD']['start_align']
-            #use_div = cfg['daLabelWD']['use_div']
-            #grad_scale = cfg['daLabelWD']['grad_scale']
-            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight']
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
             val_max = n_class
             it = iter
-            for bag_loss_weight in [500]:
+            for bag_loss_weight in cfg['daLabelWD']['bag_loss_weight']:
+                    feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
+                    data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
+                    domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
 
-                feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
-                data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
-                domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
-
+                    
+                    dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader,
+                                        target_bags,
+                                    n_class=n_class, 
+                                    epoch_start_align=start_align, 
+                                    init_lr=lr,
+                                    n_epochs=n_epochs,
+                                    iter=it, 
+                                    iter_domain_classifier=cfg['daLabelWD']['iter_domain_classifier'],
+                                    proportion_S=proportion_S,
+                                    bag_loss_weight=bag_loss_weight,
+                                    dist_loss_weight=dist_loss_weight,)
+                    set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr, betas=(0.5, 0.999)))
+                    set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
+                    set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
+                    dalabelot.fit()
+                    #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
+                    #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
+                    # #%%
+                    model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
+                    # model_s.eval()
+                    # acc_test, bal_acc_test, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
+                    # print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
                 
-                dalabelot = daLabelWD(feat_extract_dalabelot, data_class_dalabelot, domain_class_dalabelot, source_loader,
-                                       target_bags,
-                                n_class=n_class, 
-                                epoch_start_align=start_align, 
-                                init_lr=lr,
-                                n_epochs=n_epochs,
-                                iter=it, 
-                                iter_domain_classifier=cfg['daLabelWD']['iter_domain_classifier'],
-                                proportion_S=proportion_S,
-                                bag_loss_weight=bag_loss_weight,
-                                dist_loss_weight=dist_loss_weight,)
-                set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr, betas=(0.5, 0.999)))
-                set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
-                set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr, betas=(0.5, 0.999)))
-                dalabelot.fit()
-                #acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=True)
-                #print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
-                # #%%
-                model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
-                # model_s.eval()
-                # acc_test, bal_acc_test, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
-                # print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
-            
 
 
-                model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
-                model_s.eval()
-                val_err = error_on_bag_prop(model_s,val_bags,n_class=n_class)
-                if val_err < val_max:
-                    val_max = val_err
-                    best_bag_loss_weight = bag_loss_weight
-                    acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=False)
-            
-                print(f' {bag_loss_weight}  {val_max:.4f} {bal_acc_test:.4f}')
+                    model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
+                    model_s.eval()
+                    val_err = error_on_bag_prop(model_s,val_bags,n_class=n_class)
+                    if val_err < val_max:
+                        val_max = val_err
+                        best_bag_loss_weight = bag_loss_weight
+                        acc_test, bal_acc_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=False)
+                
+                    print(f' {bag_loss_weight}  {val_max:.4f} {bal_acc_test:.4f}')
 
             #%%
             print("Accuracy on the test set: ", bal_acc_test)

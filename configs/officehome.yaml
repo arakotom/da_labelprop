@@ -23,7 +23,7 @@ model:
   n_hidden: 128
 bagCSI:
   lr: 0.001
-  n_epochs: 400
+  n_epochs: 200
 daLabelOT:  
   ent_weight: 0.
   clf_t_weight: 0
@@ -35,10 +35,13 @@ daLabelOT:
   lr: 0.001
   lr_phi: 0.001
 daLabelWD:  
-  n_epochs: 400
+  n_epochs: 200
   epoch_start_g: 0
   start_align: 5
-  dist_loss_weight: 0.00001
+  dist_loss_weight: 
+    - 0.01
+    - 0.0001
+    - 0.00001
   lr: 0.001
   lr_phi: 0.001
   iter_domain_classifier: 1
