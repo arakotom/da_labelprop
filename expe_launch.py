@@ -23,7 +23,7 @@ n_param = 3
 # n_param = 5
 list_problems = [0,1,2,3,4,5]
 algo_list = ['bagCSI','daLabelWD']
-#algo_list = ['bagCSI']
+algo_list = ['daLabelWD']
 list_bag_size = [50]
 for i_p in range(n_param):
     for bag_size in list_bag_size:

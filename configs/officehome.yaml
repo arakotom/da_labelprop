@@ -49,7 +49,12 @@ daLabelWD:
   lr: 0.001
   lr_phi: 0.001
   iter_domain_classifier: 1
-
+  bag_loss_weight:
+    - 1
+    - 10
+    - 50
+    - 100
+  
 
 #  beaucoup d'iteration n_epochs
 # - un peu d'adaptation 
