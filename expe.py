@@ -143,7 +143,7 @@ if __name__ == '__main__':
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
-            param_da = cfg['bagCSI']['param_da']
+            param_da = cfg['bagCSI']['param_da'][args.i_param]
             source_loader, target_bags = get_office31(source = source, target = target, batch_size=128, drop_last=True,
                         nb_missing_feat = None,
                         nb_class_in_bag = nb_class_in_bag,
@@ -204,7 +204,6 @@ if __name__ == '__main__':
             input_size = dim
             learning_rate = cfg['bagCSI']['lr']
             num_epochs = cfg['bagCSI']['n_epochs']
-            param_da = cfg['bagCSI']['param_da']
             val_max = n_class
 
             for param_bag in [1,5,10,20,50]:
