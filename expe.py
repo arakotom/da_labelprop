@@ -142,6 +142,8 @@ if __name__ == '__main__':
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
+
+            param_da = cfg['bagCSI']['param_da']
             source_loader, target_bags = get_office31(source = source, target = target, batch_size=128, drop_last=True,
                         nb_missing_feat = None,
                         nb_class_in_bag = nb_class_in_bag,
@@ -169,7 +171,7 @@ if __name__ == '__main__':
          
 
         if args.algo == 'bagCSI':
-            pass
+            filesave += f"-param_da-{param_da:2.6f}"
         if args.algo == 'daLabelWD':
             filesave += f"-dist_loss_weight-{dist_loss_weight:2.6f}"
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
