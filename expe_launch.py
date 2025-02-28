@@ -19,7 +19,7 @@ data = 'office31'
 list_problems = [0,1,2,3]
 algo_list = ['bagCSI','daLabelWD']
 algo_list = ['bagCSI']
-n_param_list = [1, 4]
+n_param = 5
 list_bag_size = [50]
 for i_p in range(n_param):
     for bag_size in list_bag_size:
