@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
     parser.add_argument('--data', type=str, default='officehome')
-    parser.add_argument('--algo', type=str, default='bagCSI')
+    parser.add_argument('--algo', type=str, default='daLabelWD')
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=5)
@@ -186,7 +186,7 @@ if __name__ == '__main__':
         os.makedirs(savedir, exist_ok=True)
 
 
-
+        print(filesave)
 
     
 
