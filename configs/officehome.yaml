@@ -43,7 +43,7 @@ daLabelWD:
   epoch_start_g: 0
   start_align: 5
   dist_loss_weight: 
-    - 0.01
+    - 0.001
     - 0.0001
     - 0.00001
   lr: 0.001
@@ -51,9 +51,9 @@ daLabelWD:
   iter_domain_classifier: 1
   bag_loss_weight:
     - 1
-    - 10
-    - 50
     - 100
+    - 500
+    - 1000
   
 
 #  beaucoup d'iteration n_epochs
