@@ -7,6 +7,11 @@ from utils_local import evaluate_data_classifier, loop_iterable, set_requires_gr
     compute_diff_label, set_lr
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+def normalize_gradient(model):
+    for param in model.parameters():
+        if param.grad is not None:
+            param.grad.data = param.grad.data / (param.grad.data.norm() + 1e-8)
+
 class daLabelWD(object):
     def __init__(self, feat_extractor, data_classifier, domain_classifier, source_data_loader, target_bags,
                  grad_scale=1.0, cuda=False,  n_class=10, ts=1, 
@@ -227,10 +232,18 @@ class daLabelWD(object):
 
 
 
-                    loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
+                    #loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
+
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
-                    loss.backward()
+                    #loss.backward()
+                    clf_s_loss.backward(retain_graph=True)
+                    dist_loss.backward(retain_graph=True)
+                    (self.bag_loss_weight*bag_loss).backward()
+                    normalize_gradient(self.data_classifier)
+                    normalize_gradient(self.feat_extractor)
+
+                    
                     self.optimizer_data_classifier.step()
                     self.optimizer_feat_extractor.step()
                 else:
@@ -314,7 +327,7 @@ if __name__ == '__main__':
 
     lr_f, lr_g, lr_phi, lr_d = 0.01, 0.01, 0.01, 0.01
     ent_weight = clf_t_weight = div_weight = 0.1
-    bag_loss_weight = 50
+    bag_loss_weight = 100
     n_epochs = 50
     epoch_start_g = 5
     it = 0
@@ -327,13 +340,9 @@ if __name__ == '__main__':
                            cuda=cuda,
                      n_class=n_class, 
                     epoch_start_align=opt["start_align"], init_lr=opt["lr"],
-                    #use_div=use_div,
                     n_epochs=n_epochs,
-                    #clf_t_weight=clf_t_weight, 
                     iter=it, 
                     epoch_start_g=epoch_start_g,
-                    #div_weight=div_weight,
-                    #data_class_t=data_class_t_dalabelot, ent_weight=ent_weight,
                     proportion_S=proportion_S,
                     bag_loss_weight=bag_loss_weight)
     set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr_g, betas=(0.5, 0.999)))
