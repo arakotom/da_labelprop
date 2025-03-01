@@ -36,14 +36,12 @@ daLabelOT:
   #nblocks: 1
 daLabelWD:  
   clf_t_weight: 0
-  #div_weight: 0.
   n_epochs: 50
   epoch_start_g: 0
   start_align: 5
   #use_div: False
   #grad_scale: 1
   dist_loss_weight: 
-    - 0.1
     - 0.01
     - 0.001
     - 0.0001

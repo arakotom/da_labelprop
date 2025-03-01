@@ -15,7 +15,7 @@ parser.add_argument("--seed", type=int, default=0)
 args = parser.parse_args()
 seed = args.seed
 current_path = os.getcwd()
-data = 'officehome'
+data = 'office31'
 n_param = 3
 
 
