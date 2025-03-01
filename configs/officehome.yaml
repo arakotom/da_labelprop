@@ -41,7 +41,7 @@ daLabelOT:
 daLabelWD:  
   n_epochs: 200
   epoch_start_g: 0
-  start_align: 0
+  start_align: 5
   dist_loss_weight: 
     - 0.01
     - 0.001
