@@ -232,16 +232,17 @@ class daLabelWD(object):
 
 
 
-                    #loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
+                    loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
 
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
-                    #loss.backward()
-                    clf_s_loss.backward(retain_graph=True)
-                    (self.dist_loss_weight*dist_loss).backward(retain_graph=True)
-                    (self.bag_loss_weight*bag_loss).backward()
-                    normalize_gradient(self.data_classifier)
-                    normalize_gradient(self.feat_extractor)
+                    loss.backward()
+                    
+                    # clf_s_loss.backward(retain_graph=True)
+                    # (self.dist_loss_weight*dist_loss).backward(retain_graph=True)
+                    # (self.bag_loss_weight*bag_loss).backward()
+                    # normalize_gradient(self.data_classifier)
+                    # normalize_gradient(self.feat_extractor)
 
                     
                     self.optimizer_data_classifier.step()
