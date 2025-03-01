@@ -238,7 +238,7 @@ class daLabelWD(object):
                     self.optimizer_feat_extractor.zero_grad()
                     #loss.backward()
                     clf_s_loss.backward(retain_graph=True)
-                    dist_loss.backward(retain_graph=True)
+                    (self.dist_loss_weight*dist_loss).backward(retain_graph=True)
                     (self.bag_loss_weight*bag_loss).backward()
                     normalize_gradient(self.data_classifier)
                     normalize_gradient(self.feat_extractor)
