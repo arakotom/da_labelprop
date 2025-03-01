@@ -417,12 +417,12 @@ def get_toy(batch_size=32, drop_last=True,
 if __name__ == "__main__":
 
 
-    if  1:
+    if  0:
         source = 'amazon_amazon'
         target = 'amazon_dslr'
         source_loader, target_bags = get_office31(source=source, target=target)
 
-    if  0:
+    if  1:
         source_loader, target_bags = get_visda(apply_miss_feature_source=True)
     if  0:
 

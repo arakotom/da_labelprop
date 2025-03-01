@@ -38,7 +38,7 @@ daLabelWD:
   clf_t_weight: 0
   n_epochs: 50
   epoch_start_g: 0
-  start_align: 5
+  start_align: 1
   #use_div: False
   #grad_scale: 1
   dist_loss_weight: 
@@ -54,8 +54,10 @@ daLabelWD:
     - 30
     - 40
   lr: 0.01
-  #lr_phi: 0.001
-  #nblocks: 1
+
+
+# tested
+# it 1, start_align 1
 
 
 
