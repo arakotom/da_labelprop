@@ -41,16 +41,17 @@ daLabelOT:
 daLabelWD:  
   n_epochs: 200
   epoch_start_g: 0
-  start_align: 5
+  start_align: 0
   dist_loss_weight: 
     - 1
     - 0.1
     - 0.01
     - 0.001
     - 0.0001
-  lr: 0.001
-  iter_domain_classifier: 2
+  lr: 0.01
+  iter_domain_classifier: 1
   bag_loss_weight:
+    - 1
     - 10
     - 50
     - 100
