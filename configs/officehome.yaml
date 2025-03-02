@@ -43,12 +43,12 @@ daLabelWD:
   epoch_start_g: 0
   start_align: 5
   dist_loss_weight: 
+    - 1
+    - 0.1
     - 0.01
     - 0.001
     - 0.0001
-    - 0.00001
-  lr: 0.005
- # lr_phi: 0.001
+  lr: 0.001
   iter_domain_classifier: 2
   bag_loss_weight:
     - 10
