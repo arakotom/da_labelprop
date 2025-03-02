@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    sys.argv = ['']
+    #sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
