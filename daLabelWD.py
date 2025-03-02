@@ -7,6 +7,12 @@ from utils_local import evaluate_data_classifier, loop_iterable, set_requires_gr
     compute_diff_label, set_lr
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+def entropy_loss(v):
+    """
+    Entropy loss for probabilistic prediction vectors
+    """
+    return torch.mean(torch.sum(- torch.softmax(v, dim=1) * torch.log_softmax(v, dim=1), 1))
+
 def normalize_gradient(model):
     for param in model.parameters():
         if param.grad is not None:
@@ -36,6 +42,7 @@ class daLabelWD(object):
         self.proportion_S = proportion_S
         self.cuda = True if torch.cuda.is_available() else False
         self.n_epochs = n_epochs
+        self.ent_weight = 0.1
         self.criterion = nn.CrossEntropyLoss()
         self.epoch_start_align = epoch_start_align
         #self.epoch_start_g = epoch_start_g
@@ -229,11 +236,14 @@ class daLabelWD(object):
                     outputs_target = self.data_classifier(z[x_s.shape[0]:])
                     outputs_target = torch.softmax(outputs_target, dim=1)
                     bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T).to(self.device)))
-
+                        
+                    #
+                    output_class_t = self.data_classifier(z[x_s.shape[0]:])
+                    ent_loss = self.ent_weight * entropy_loss(output_class_t)
 
 
                     loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
-
+                    loss += ent_loss
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
                     loss.backward()

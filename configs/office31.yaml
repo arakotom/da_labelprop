@@ -36,28 +36,24 @@ daLabelOT:
   #nblocks: 1
 daLabelWD:  
   clf_t_weight: 0
-  n_epochs: 50
+  n_epochs: 30
   epoch_start_g: 0
-  start_align: 1
-  #use_div: False
-  #grad_scale: 1
+  start_align: 0
   dist_loss_weight: 
+    - 1
+    - 0.1
     - 0.01
     - 0.001
     - 0.0001
-    - 0.00001
   iter_domain_classifier: 1
-  bag_loss_weight:
+  bag_loss_weight: 
     - 1
-    - 10
-    - 20
-    - 30
-    - 40
+    - 25
+    - 50
   lr: 0.01
 
 
 # tested
-# it 1, start_align 1
 
 
 

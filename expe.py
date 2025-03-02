@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='officehome')
+    parser.add_argument('--data', type=str, default='office31')
     parser.add_argument('--algo', type=str, default='daLabelWD')
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
@@ -354,10 +354,10 @@ if __name__ == '__main__':
                     # acc_test, bal_acc_test, cm_test = evaluate_clf(model_s, test_loader,n_classes=n_class)
                     # print(f' {bag_loss_weight}  {bal_acc_test:.4f}')
                 
+                    model_s.eval()
 
 
                     model_s = nn.Sequential(feat_extract_dalabelot,  data_class_dalabelot)
-                    model_s.eval()
                     val_err = error_on_bag_prop(model_s,val_bags,n_class=n_class)
                     if val_err < val_max:
                         val_max = val_err

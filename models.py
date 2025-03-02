@@ -76,12 +76,12 @@ class DomainClassifier(nn.Module):
         self.fc1 = nn.Linear(input_dim, n_hidden, bias=True)
         self.fc2 = nn.Linear(n_hidden, n_hidden, bias=True)
         self.fc3 = nn.Linear(n_hidden, 1, bias=True)
-        self.activation = nn.GELU()
+        self.activation = nn.LeakyReLU(0.2)
 
     def forward(self, input):
         x = self.activation(self.fc1(input))
         x = self.activation(self.fc2(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))
         return x
 
 
