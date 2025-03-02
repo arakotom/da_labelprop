@@ -238,12 +238,12 @@ class daLabelWD(object):
                     bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T).to(self.device)))
                         
                     #
-                    output_class_t = self.data_classifier(z[x_s.shape[0]:])
-                    ent_loss = self.ent_weight * entropy_loss(output_class_t)
+                    #output_class_t = self.data_classifier(z[x_s.shape[0]:])
+                    #ent_loss = self.ent_weight * entropy_loss(output_class_t)
 
 
                     loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
-                    loss += ent_loss
+                    #loss += ent_loss
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
                     loss.backward()
