@@ -23,11 +23,37 @@ model:
   n_hidden: 128
 bagCSI:
   lr: 0.001
-  n_epochs: 200
-  param_da:
-    - 10
+  n_epochs: 300
+  param_bag:
     - 1
-    - 0.1
+bagTopk:
+  lr: 0.001
+  n_epochs: 300
+  topk: 30
+  param_bag:
+    - 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 daLabelOT:  
   ent_weight: 0.
   clf_t_weight: 0

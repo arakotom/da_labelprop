@@ -29,7 +29,7 @@ def extract_data_label(Bag, type_label = 'label', type_data = 'data'):
     return X,y
 
 
-def extract_feature(net,train_loader,device='cpu'):
+def extract_feature(net,train_loader,device='cpu',use_get_feature=False):
     net.eval()
     train_feature = []
     train_label = []
@@ -37,7 +37,10 @@ def extract_feature(net,train_loader,device='cpu'):
         label = targets.cpu()
         inputs, targets = inputs.to(device), targets.to(device)        
 
-        outputs, feature = net(inputs,get_feature=True)
+        if use_get_feature:
+            outputs, feature = net(inputs,get_feature=True)
+        else:
+            feature = net(inputs)
         feature = feature.detach().cpu()
 
         train_feature.append(feature)

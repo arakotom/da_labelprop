@@ -9,21 +9,23 @@ def get_specific_command(data, bag_size):
 
     return spec
 
-sys.argv = ['']
+#sys.argv = ['']
 parser = argparse.ArgumentParser(description="train model")
 parser.add_argument("--seed", type=int, default=0)
 args = parser.parse_args()
 seed = args.seed
 current_path = os.getcwd()
 data = 'officehome'
-n_param = 5
-
+n_param = 1
+list_problems = [0,1,2,3,4]
 
 # data = 'office31'
-# n_param = 5
-list_problems = [0,1,2,3,4,5]
-algo_list = ['bagCSI','daLabelWD']
-algo_list = ['daLabelWD']
+# n_param = 1
+# list_problems = [0,1,2,3,4,5]
+# algo_list = ['bagCSI','daLabelWD']
+# algo_list = ['bagCSI']
+algo_list = ['bagCSI','bagTopk']
+n_param = 1
 list_bag_size = [50]
 for i_p in range(n_param):
     for bag_size in list_bag_size:

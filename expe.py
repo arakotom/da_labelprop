@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -33,9 +33,9 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='office31')
+    parser.add_argument('--data', type=str, default='officehome')
     parser.add_argument('--algo', type=str, default='daLabelWD')
-    parser.add_argument('--source_target', type=int, default=0)
+    parser.add_argument('--source_target', type=int, default=4)
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=5)
     parser.add_argument('--i_param', type=int, default=0)
@@ -94,14 +94,24 @@ if __name__ == '__main__':
                 savedir = 'results/toy-' + args.expe_name
 
         if data == 'visda':
-            n_class = 12
-            dim = 2048
-            dim_latent = 512
-            n_hidden = 512
+
+            bag_size = cfg['data']['bag_size']
+            nb_class_in_bag = cfg['data']['nb_class_in_bag']
+            n_class = cfg['data']['n_class']
+            dim = cfg['data']['dim']
+            dim_latent = cfg['model']['dim_latent']
+            n_hidden = cfg['model']['n_hidden']
+            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
+            param_da = cfg['bagCSI']['param_da'][args.i_param]
+            classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
+            classe_vec = [0,4,11]
+            n_class = len(classe_vec)
             use_div = False
             source_loader, target_bags  = get_visda(batch_size=128, drop_last=True,
                         nb_class_in_bag = 10,
+                        classe_vec=classe_vec,
                         bag_size = 50,
+                        nb_missing_feat = None,
                         apply_miss_feature_source=False)
             if args.expe_name == "":
                 savedir = 'results/visda'
@@ -121,10 +131,10 @@ if __name__ == '__main__':
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
-            param_da = cfg['bagCSI']['param_da'][args.i_param]
+            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
             use_div = True
             print(source, target)
-            source_loader, target_bags = get_officehome(source = source, target = target, batch_size=128,
+            source_loader, target_bags = get_officehome(source = source, target = target, batch_size=64,
                                                          drop_last=True,
                          nb_missing_feat = None,
                         nb_class_in_bag = nb_class_in_bag,
@@ -134,7 +144,8 @@ if __name__ == '__main__':
                 savedir = 'results/officehome'
             else:
                 savedir = 'results/officehome-' + args.expe_name
-        
+            n_class = cfg['data']['n_class']
+
         if data == 'office31':
             source = cfg['data']['files'][args.source_target][0]
             target = cfg['data']['files'][args.source_target][1]
@@ -146,8 +157,7 @@ if __name__ == '__main__':
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
-            param_da = cfg['bagCSI']['param_da'][args.i_param]
-            source_loader, target_bags = get_office31(source = source, target = target, batch_size=128, drop_last=True,
+            source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                         nb_missing_feat = None,
                         nb_class_in_bag = nb_class_in_bag,
                         bag_size = bag_size )
@@ -158,7 +168,7 @@ if __name__ == '__main__':
                 savedir = 'results/office31-' + args.expe_name
 
 
-        n_class = cfg['data']['n_class']
+            n_class = cfg['data']['n_class']
         if len(target_bags) > 10:
             nb_val = len(target_bags)//10
             val_bags = target_bags[:nb_val]
@@ -174,7 +184,12 @@ if __name__ == '__main__':
          
 
         if args.algo == 'bagCSI':
-            filesave += f"-param_da-{param_da:2.6f}"
+            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
+            filesave += f"-param_bag-{param_bag:2.6f}"
+        if args.algo == 'bagTopk':
+            param_bag = cfg['bagTopk']['param_bag'][args.i_param]
+            filesave += f"-topk-{cfg['bagTopk']['topk']}"
+            filesave += f"-param_bag-{param_bag:2.6f}"
         if args.algo == 'daLabelWD':
             filesave += f"-dist_loss_weight-{dist_loss_weight:2.6f}"
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
@@ -209,7 +224,7 @@ if __name__ == '__main__':
             num_epochs = cfg['bagCSI']['n_epochs']
             val_max = n_class
 
-            for param_bag in [1,5,10,20,50]:
+            for param_da in [0.1,0.5,1,2]:
                     model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
                     bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
@@ -224,6 +239,51 @@ if __name__ == '__main__':
                         acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
 
                     print(f'bag {param_bag} da {param_da} {val_max:.4f} {bal_acc_test:.4f}')
+        #%%
+
+        if algo == 'bagTopk':
+            #%%
+            from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
+            print('bagTopk')
+            from bagMTL import bagMTL_train
+            from bagTopk import bagTopK_train
+            if 1:
+                cuda = True if torch.cuda.is_available() else False
+                with open(config_file) as file:
+                    cfg = yaml.load(file, Loader=yaml.FullLoader)
+
+            x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
+            test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
+
+            val_max = n_class
+            for mean_weight in  [0.1,0.5,1,2]:
+                for da_weight in [0]:
+                    input_size = dim
+                    n_hidden = cfg['model']['n_hidden']
+                    num_epochs = cfg['bagTopk']['n_epochs']
+                    lr = cfg['bagTopk']['lr']
+                    topk = cfg['bagTopk']['topk']
+                    param_bag = cfg['bagTopk']['param_bag'][args.i_param]
+                    feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
+                    classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
+                    classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
+                    bagTopK_train(feat_extract,classifier_1,classifier_2, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
+                                source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.0,
+                                mean_weight=mean_weight,
+                                bag_weight=param_bag,
+                                topk=topk,
+                                lr=lr)
+
+
+                    model = nn.Sequential(feat_extract,classifier_1)
+                    val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                    if val_err < val_max:
+                        val_max = val_err
+                        best_param_sw = mean_weight
+                        acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
+
+                    print(f'TopK {best_param_sw}  {val_max:.4f} {bal_acc_test:.4f}')
+    
 
 
 

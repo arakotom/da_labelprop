@@ -32,7 +32,7 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
     model.train()
     model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate,betas=(0.9, 0.999))
     for epoch in range(num_epochs):
         loss_epoch = 0
         bag_loss_epoch = 0
@@ -92,45 +92,95 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
+    if 0:
 
-    dim = 2
+        dim = 2
+        n_class = 3
+        n_hidden = 128
+        num_epochs  = 300
+        lr = 0.001
 
-    source_loader, target_bags = get_toy(apply_miss_feature_source=True,
-                                        dim=dim,
-                                        data_variance=0.5,
-                                        center_translation=10)
+        source_loader, target_bags = get_toy(apply_miss_feature_source=True,
+                                            dim=dim,
+                                            data_variance=0.5,
+                                            center_translation=5)
+        
+        from data import extract_data_label
+        x_test, y_test = extract_data_label(target_bags)
+        x_test = x_test.to(device).float()
 
-    from data import extract_data_label
-    x_test, y_test = extract_data_label(target_bags)
-    x_test = x_test.to(device).float()
+        # plot source data
+        plt.figure(figsize=(5, 4))
+        plt.scatter(source_loader.dataset.tensors[0][:, 0], source_loader.dataset.tensors[0][:, 1],
+                    c=source_loader.dataset.tensors[1], cmap='viridis')
 
-    # plot source data
-    plt.figure(figsize=(5, 4))
-    plt.scatter(source_loader.dataset.tensors[0][:, 0], source_loader.dataset.tensors[0][:, 1],
-                c=source_loader.dataset.tensors[1], cmap='viridis')
+        plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
+    
+    elif 0:
+    
+        from utils_local import loop_iterable
 
-    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
+        config_file = './configs/office31.yaml'
+        import yaml
+        from data import get_office31
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        source = cfg['data']['files'][4][0]
+        target = cfg['data']['files'][4][1]
+        bag_size = cfg['data']['bag_size']
+        nb_class_in_bag = cfg['data']['nb_class_in_bag']
+        n_class = cfg['data']['n_class']
+        dim = cfg['data']['dim']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagMTL']['lr']
+        num_epochs = cfg['bagMTL']['n_epochs']
+        source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
+                    nb_missing_feat = None,
+                    nb_class_in_bag = nb_class_in_bag,
+                    bag_size = bag_size )
+    elif 1:
+        config_file = './configs/visda.yaml'
+        import yaml
+        from data import get_visda
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        bag_size = cfg['data']['bag_size']
+        nb_class_in_bag = cfg['data']['nb_class_in_bag']
+        n_class = cfg['data']['n_class']
+        dim = cfg['data']['dim']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        num_epochs = 30
+        classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
+        #classe_vec = [0,4,11]
+        n_class = len(classe_vec)
+        use_div = False
+        source_loader, target_bags  = get_visda(batch_size=256, drop_last=True,
+                    nb_class_in_bag = 10,
+                    classe_vec=classe_vec,
+                    bag_size = 50,
+                    nb_missing_feat = None,
+                    apply_miss_feature_source=False)
 
     #%%
 
-    input_size = dim
-    hidden_size1 = 128
-    hidden_size2 = 64
-    output_size = 3
-    learning_rate = 0.001
-    num_epochs = 200
 
     # Initialize the model, loss function, and optimizer
-    model = FullyConnectedNN(input_size, hidden_size1, hidden_size2, output_size)
-    bagCSI_train(model, source_loader, target_bags, n_classes=3, num_epochs=num_epochs,device=device,
-                    param_bag=1, param_da=1)
+    model= FullyConnectedNN(dim, n_hidden, n_class)
+    bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
+                    param_bag=1, param_da=10,verbose=True)
 
 
     
     from utils import evaluate_clf, create_data_loader
+    x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
     test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
-    acc, bal_acc, cm = evaluate_clf(model, test_loader,n_classes=3,return_pred=False)
 
+    acc, bal_acc, cm = evaluate_clf(model, test_loader,n_classes=n_class,return_pred=False)
+    print(f'Accuracy: {bal_acc:.4f}')
 
 
     #%%

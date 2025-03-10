@@ -322,7 +322,8 @@ def get_visda(batch_size=32, drop_last=True,
                         classe_vec=[0,4,11],
                         path = './data/visda/',
                         miss_feature=None,
-                        apply_miss_feature_source=False): 
+                        apply_miss_feature_source=False,
+                        apply_miss_feature_target=False,): 
     
                              
                         
@@ -357,7 +358,8 @@ def get_visda(batch_size=32, drop_last=True,
     res = np.load(path+filename)
     data = torch.from_numpy(res['X']).float()
     label = torch.from_numpy(res['y']).long()
-    data = data[:,mask] 
+    if apply_miss_feature_target:
+        data = data[:,mask] 
 
     target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
 
