@@ -17,7 +17,7 @@ seed = args.seed
 current_path = os.getcwd()
 
 list_bag_size = [50]
-list_data = ['officehome', 'visda', 'office31']
+list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 algo_list = ['bagCSI','bagTopk']
 n_param = 1
 

@@ -3,7 +3,9 @@ data:
   nb_class_in_bag: 10
   bag_size: 50
   n_class: 10
-  model:
+model:
+  dim_latent: 128
+  n_hidden: 128
 bagCSI:
   lr: 0.001
   n_epochs: 30

@@ -2,8 +2,7 @@ data:
   dep_sample: 1
   nb_class_in_bag: 12
   bag_size: 50
-  n_class: 3
-  dim: 2048
+  n_class: 10
 model:
   dim_latent: 128
   n_hidden: 128
