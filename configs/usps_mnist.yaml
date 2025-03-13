@@ -1,6 +1,6 @@
 data:
   dep_sample: 1
-  nb_class_in_bag: 12
+  nb_class_in_bag: 10
   bag_size: 50
   n_class: 10
 model:
