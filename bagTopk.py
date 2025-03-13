@@ -20,7 +20,7 @@ import torchvision.transforms as transforms
 import pandas as pd
 from data import get_toy
 from utils import extract_feature
-from models import FullyConnectedNN, FeatureExtractor, DataClassifier
+from models import FeatureExtractor, DataClassifier
 from utils_local import loop_iterable
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -44,7 +44,7 @@ def entropy_loss(v):
 
 
 
-def bagTopK_train(feature_extractor,classifier_1,classifier_2, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
+def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
                     lr=0.001,source_weight=1,
                     ent_weight=0.1, da_weight=0.,
                     topk=15,
@@ -53,15 +53,15 @@ def bagTopK_train(feature_extractor,classifier_1,classifier_2, source_loader, ta
                     verbose=False,large_source_loader=None):
     feature_extractor.train()
     classifier_1.train()
-    classifier_2.train()
+    #classifier_2.train()
     feature_extractor.to(device)
     classifier_1.to(device)
-    classifier_2.to(device)
+    #classifier_2.to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer_feat = optim.Adam(feature_extractor.parameters(), lr=lr,betas=(0.9, 0.999))
     optimizer_c1 = optim.Adam(classifier_1.parameters(), lr=lr,betas=(0.9, 0.999))
-    optimizer_c2 = optim.Adam(classifier_2.parameters(), lr=lr,betas=(0.9, 0.999))
+    #optimizer_c2 = optim.Adam(classifier_2.parameters(), lr=lr,betas=(0.9, 0.999))
     
     for epoch in range(num_epochs):
         loss_1_epoch = 0
@@ -267,6 +267,7 @@ if __name__ == '__main__':
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagTopk']['lr']
         num_epochs = 30
         classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
         #classe_vec = [0,4,11]
@@ -288,8 +289,8 @@ if __name__ == '__main__':
     
     feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
     classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-    classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-    bagTopK_train(feat_extract,classifier_1,classifier_2, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
+    #classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
+    bagTopK_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
                    source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.,
                    mean_weight=1,
                    bag_weight=1,
@@ -305,8 +306,8 @@ if __name__ == '__main__':
     test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
     acc, bal_acc_1, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_1), test_loader,n_classes=n_class,return_pred=False)
-    acc, bal_acc_2, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_2), test_loader,n_classes=n_class,return_pred=False)
-    print(f'Balanced Accuracy S+T: {bal_acc_1:.4f}, Balanced Accuracy S: {bal_acc_2:.4f}')
+    #acc, bal_acc_2, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_2), test_loader,n_classes=n_class,return_pred=False)
+    print(f'Balanced Accuracy S+T: {bal_acc_1:.4f}')
 
 
 

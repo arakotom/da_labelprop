@@ -1,38 +1,23 @@
 data:
   dep_sample: 1
-  nb_class_in_bag: 10
+  nb_class_in_bag: 12
   bag_size: 50
-  n_class: 31
+  n_class: 3
   dim: 2048
-  files:
-    - ['amazon_amazon', 'amazon_dslr']
-    - ['amazon_amazon','amazon_webcam']
-    - ['dslr_dslr', 'dslr_amazon']
-    - ['dslr_dslr', 'dslr_webcam']
-    - ['webcam_webcam', 'webcam_amazon']
-    - ['webcam_webcam', 'webcam_dslr']
 model:
   dim_latent: 128
   n_hidden: 128
 bagCSI:
   lr: 0.001
-  n_epochs: 300
+  n_epochs: 30
   param_bag:
     - 1
 bagTopk:
   lr: 0.001
-  n_epochs: 300
-  topk: 15
+  n_epochs: 30
+  topk: 1
   param_bag:
     - 1
-
-
-
-
-
-
-
-
 
 
 
@@ -72,12 +57,12 @@ daLabelWD:
   epoch_start_g: 0
   start_align: 1
   dist_loss_weight: 
-    - 1
+    - 0
     - 0.1
     - 0.01
     - 0.001
     - 0.0001
-  iter_domain_classifier: 2
+  iter_domain_classifier: 1
   bag_loss_weight: 
     - 1
     - 25

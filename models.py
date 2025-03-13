@@ -1,3 +1,4 @@
+#%%
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -112,24 +113,54 @@ class DataClassifier(nn.Module):
 
 
 
-# Define the neural network class
-class FullyConnectedNN(nn.Module):
-    def __init__(self, input_size, n_hidden=256, n_class=10):
-        super(FullyConnectedNN, self).__init__()
-        # Define layers
-        self.fc1 = nn.Linear(input_size, n_hidden)
-        self.fc2 = nn.Linear(n_hidden, n_hidden)
-        self.fc3 = nn.Linear(n_hidden, n_class)
-        self.relu = nn.LeakyReLU(0.2)
-        self.dropout = nn.Dropout(p=0.1)
+# ------------------------------------------------------------------------------
+#                   Digits
+# ------------------------------------------------------------------------------
 
-    def forward(self, x, get_feature=False):
-        # Define forward pass
-        x = self.relu(self.fc1(x))
-        x_feat = self.relu(self.fc2(x))
-        x_feat = self.dropout(x_feat)
-        x = self.fc3(x_feat)  # No softmax here
-        if get_feature:
-            return x, x_feat
-        else:
-            return x
+
+class FeatureExtractorDigits(nn.Module):
+    def __init__(self, channel, kernel_size=5, output_dim=128):
+        super(FeatureExtractorDigits, self).__init__()
+        self.conv1 = nn.Conv2d(channel, 64, kernel_size=kernel_size)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.pool1 = nn.MaxPool2d(2)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=kernel_size)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.pool2 = nn.MaxPool2d(2)
+        self.conv3 = nn.Conv2d(64, output_dim, kernel_size=kernel_size)
+        self.bn3 = nn.BatchNorm2d(output_dim)
+        self.act = nn.LeakyReLU(0.2)
+
+    def forward(self, input):
+        x = self.bn1(self.conv1(input))
+        x = self.act(self.pool1(x))
+        x = self.bn2(self.conv2(x))
+        x = self.act(self.pool2(x))
+        x = self.bn3(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        return x
+
+
+class DataClassifierDigits(nn.Module):
+    def __init__(self, n_class, input_size=128):
+        super(DataClassifierDigits, self).__init__()
+        self.fc1 = nn.Linear(input_size, 100)
+        self.bn1 = nn.BatchNorm1d(100)
+        self.fc2 = nn.Linear(100, 100)
+        self.bn2 = nn.BatchNorm1d(100)
+        self.fc3 = nn.Linear(100, n_class)
+        self.act = nn.LeakyReLU(0.2)
+
+    def forward(self, input):
+        x = self.act(self.bn1(self.fc1(input)))
+        x = self.act(self.bn2(self.fc2(x)))
+        x = self.fc3(x)
+        return x
+
+if __name__ == '__main__':
+    feat = FeatureExtractorDigits(1, 3, 128)
+    
+    print(feat(torch.randn(10, 1, 28, 28)).shape)
+
+
+# %%

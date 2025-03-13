@@ -20,19 +20,21 @@ import torchvision.transforms as transforms
 import pandas as pd
 from data import get_toy
 from utils import extract_feature
-from models import FullyConnectedNN
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 
-def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,device='cpu',
+def bagCSI_train(feature_extractor,classifier, source_loader, target_bags, n_classes, num_epochs=100,device='cpu',
                     param_bag=0.1, param_da=0.1,
                     learning_rate=0.001,
                     verbose=False):
-    model.train()
-    model.to(device)
+    feature_extractor.train()
+    feature_extractor.to(device)
+    classifier.train()
+    classifier.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate,betas=(0.9, 0.999))
+    optim_feat = optim.Adam(feature_extractor.parameters(), lr=learning_rate,betas=(0.9, 0.999))
+    optim_clf = optim.Adam(classifier.parameters(), lr=learning_rate,betas=(0.9, 0.999))
     for epoch in range(num_epochs):
         loss_epoch = 0
         bag_loss_epoch = 0
@@ -46,18 +48,22 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
             y_target_prop = torch.tensor(target_bags[i_bag]['prop']).to(device)
 
             # source loss
-            outputs, source_feature = model(x_train, get_feature=True)
+            #outputs, source_feature = model(x_train, get_feature=True)
+            #loss_source = criterion(outputs, y_train)
+            source_feature = feature_extractor(x_train)
+            outputs = classifier(source_feature)
             loss_source = criterion(outputs, y_train)
 
             # bag loss
-            outputs_target,target_feature  = model(x_target, get_feature=True)
+            #outputs_target,target_feature  = model(x_target, get_feature=True)
+            target_feature = feature_extractor(x_target)
+            outputs_target = classifier(target_feature)
             outputs_target = torch.softmax(outputs_target, dim=1)
             loss_bag = torch.mean(torch.abs(outputs_target.mean(dim=0) - y_target_prop))
 
             # domain adaptation loss as in Equation (12)
             # written for multidimensional regression based on one-hot encoding 
             loss_da = 0
-            
             for j in range(n_classes):
                 source_feature_data = source_feature*(y_train==j).float().view(-1,1)
                 target_feature_data = target_feature*(y_target_prop[j]).float().view(-1,1)
@@ -66,10 +72,12 @@ def bagCSI_train(model, source_loader, target_bags, n_classes, num_epochs=100,de
 
 
 
-            optimizer.zero_grad()
+            optim_feat.zero_grad()
+            optim_clf.zero_grad()
             loss = loss_source + param_bag*loss_bag + param_da*loss_da
             loss.backward()
-            optimizer.step()
+            optim_feat.step()
+            optim_clf.step()
             loss_epoch += loss.item()
             loss_source_epoch += loss_source.item()
             bag_loss_epoch += loss_bag.item()           
@@ -167,18 +175,22 @@ if __name__ == '__main__':
 
     #%%
 
+    from models import FullyConnectedNN, FeatureExtractor, DataClassifier
 
-    # Initialize the model, loss function, and optimizer
-    model= FullyConnectedNN(dim, n_hidden, n_class)
-    bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
+    # Initialize the model, loss function, and optimizer        
+    feat_extract = FeatureExtractor(input_dim=dim, n_hidden=n_hidden, output_dim=n_hidden)
+    classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
+    
+    bagCSI_train(feat_extract,classifier, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                     param_bag=1, param_da=10,verbose=True)
 
-
+    #%%
     
-    from utils import evaluate_clf, create_data_loader
+    from utils import evaluate_clf, create_data_loader, extract_data_label
     x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
     test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
-
+    model = nn.Sequential(feat_extract,classifier)
+    model.to(device)
     acc, bal_acc, cm = evaluate_clf(model, test_loader,n_classes=n_class,return_pred=False)
     print(f'Accuracy: {bal_acc:.4f}')
 

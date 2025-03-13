@@ -18,6 +18,8 @@ from scipy.io import loadmat
 from torchvision import models
 import torchvision.transforms as transforms
 import pandas as pd
+from torchvision import datasets, transforms
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -164,7 +166,7 @@ def create_bags_from_data_dep(train_data, train_labels, bag_size, nb_class_in_ba
 
     n_class = len(torch.unique(train_labels))
     num_bags = train_data.shape[0]//bag_size
-
+    print(n_class)
 
 
     good_bag = False
@@ -223,6 +225,99 @@ def create_bags_from_data_dep(train_data, train_labels, bag_size, nb_class_in_ba
         Bag[i_bag]['prop'] = prop
 
     return Bag
+
+def get_usps_mnist(batch_size=32, drop_last=True,
+                        nb_missing_feat = 10,
+                        nb_class_in_bag = 10,
+                        bag_size = 50,
+                        path = './data/',
+                        miss_feature=None,
+                        apply_miss_feature_target=False,
+                        apply_miss_feature_source=False):
+
+    
+    # Define the transformations for the dataset
+    transform = transforms.Compose([
+        transforms.Resize((28, 28)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+
+    # Load the USPS dataset
+
+    train_dataset = datasets.USPS(root='./data', train=True, download=True, transform=transform)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False, 
+        drop_last=False)
+    data,label = next(iter(train_loader))
+    full_data = torch.utils.data.TensorDataset(data.float(), label.long())
+
+    source_loader = torch.utils.data.DataLoader(
+        dataset=full_data,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True)
+
+
+
+    # transform = transforms.Compose([
+    # transforms.Resize((28, 28)),
+    # transforms.ToTensor(),
+    # transforms.Normalize((0.1307,), (0.3081,))
+    # ])
+
+    # Load the MNIST dataset
+    #train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, 
+        drop_last=False)
+    data,label = next(iter(test_loader))
+    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+
+    return source_loader, target_bags
+
+
+def get_mnist_usps(batch_size=32, drop_last=True,
+                        nb_missing_feat = 10,
+                        nb_class_in_bag = 10,
+                        bag_size = 50,
+                        path = './data/',
+                        miss_feature=None,
+                        apply_miss_feature_target=False,
+                        apply_miss_feature_source=False):
+
+    
+    # Define the transformations for the dataset
+    transform = transforms.Compose([
+        transforms.Resize((28, 28)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+
+
+    # Load the MNIST dataset
+    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False, 
+        drop_last=False)
+    data,label = next(iter(train_loader))
+    full_data = torch.utils.data.TensorDataset(data.float(), label.long())
+
+    source_loader = torch.utils.data.DataLoader(
+        dataset=full_data,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True)
+
+    # Load the USPS dataset
+
+    test_dataset = datasets.USPS(root='./data', train=True, download=True, transform=transform)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(train_dataset), shuffle=False, 
+        drop_last=False)
+    data,label = next(iter(test_loader))
+    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+
+    return source_loader, target_bags
+
+
 
 def get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=32, drop_last=True,
                          nb_missing_feat = 10,
@@ -422,23 +517,43 @@ if __name__ == "__main__":
     if  0:
         source = 'amazon_amazon'
         target = 'amazon_dslr'
-        source_loader, target_bags = get_office31(source=source, target=target)
+        source_loader, target_bags = get_office31(source=source, target=target,bag_size=50,apply_miss_feature_target=True)
 
-    if  1:
-        source_loader, target_bags = get_visda(apply_miss_feature_source=True)
+    if  0:
+        source_loader, target_bags = get_visda(apply_miss_feature_source=True,bag_size=50)
     if  0:
 
-        source_loader, target_bags = get_toy(apply_miss_feature_source=True)
+        source_loader, target_bags = get_toy(apply_miss_feature_source=True,bag_size=50)
+    if 1:
+        source_loader, target_bags = get_officehome(source = 'Art_Art', target = 'Art_Clipart',
+                                                    apply_miss_feature_target=True,
+                                                    bag_size=50)
+
     if 0:
-        source_loader, target_bags = get_officehome(source = 'Art_Art', target = 'Art_Clipart',apply_miss_feature_target=True)
+        source_loader, target_bags = get_usps_mnist()
+    if 0:
+        source_loader, target_bags = get_mnist_usps()
+    print(len(source_loader.dataset),len(target_bags))
 
 
-    print('source_loader',source_loader.dataset.tensors[0].shape)
-    print('target_bags',target_bags[0]['data'].shape)
-    s = 0
-    for bag in target_bags:
-        s += bag['data'].shape[0]
-    print(s/len(target_bags))
+    #%%
+
+    #%%
+
+
+
+
+    # print('source_loader',source_loader.dataset.tensors[0].shape)
+    # print('target_bags',target_bags[0]['data'].shape)
+    # s = 0
+    # for bag in target_bags:
+    #     s += bag['data'].shape[0]
+    # print(s/len(target_bags))
+
+
+
+
+
 
     #%%
     # check the config file
@@ -462,9 +577,6 @@ if __name__ == "__main__":
 
                 print('source_loader', source, source_loader.dataset.tensors[0].shape)
                 print('target_bags',target, target_bags[0]['data'].shape)
-
-
-
 
 
 

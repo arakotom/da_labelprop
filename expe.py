@@ -2,30 +2,27 @@
 #%%
 import math
 import os
-import time
 
 import numpy as np
-import ot 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
 import argparse
 import warnings
 from bagCSI import bagCSI_train
-from models import FullyConnectedNN
 from data import get_toy, get_visda, get_officehome, get_office31
+from data import get_mnist_usps, get_usps_mnist
 from utils import create_data_loader, evaluate_clf, extract_data_label, error_on_bag_prop
 from utils_local import evaluate_data_classifier
 import yaml 
 import sys
+from models import FeatureExtractor, DataClassifier, FeatureExtractorDigits, DataClassifierDigits
 warnings.filterwarnings("ignore", category=UserWarning) 
 if __name__ == '__main__':
 
 
     
-    sys.argv = ['']
+    #sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -33,7 +30,7 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='officehome')
+    parser.add_argument('--data', type=str, default='mnist_usps')
     parser.add_argument('--algo', type=str, default='daLabelWD')
     parser.add_argument('--source_target', type=int, default=4)
     parser.add_argument('--bag_size', type=int, default=50)
@@ -92,6 +89,21 @@ if __name__ == '__main__':
                 savedir = 'results/toy'
             else:
                 savedir = 'results/toy-' + args.expe_name
+        if data == 'mnist_usps':
+            bag_size = cfg['data']['bag_size']
+            nb_class_in_bag = cfg['data']['nb_class_in_bag']
+            n_class = cfg['data']['n_class']
+            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
+
+            source_loader, target_bags  = get_mnist_usps(batch_size=128, drop_last=True,
+                        nb_class_in_bag = nb_class_in_bag,
+                        bag_size = bag_size,
+                        nb_missing_feat = None,
+                        apply_miss_feature_source=False)
+            if args.expe_name == "":
+                savedir = 'results/mnist_usps'
+            else:
+                savedir = 'results/mnist_usps-' + args.expe_name
 
         if data == 'visda':
 
@@ -102,15 +114,17 @@ if __name__ == '__main__':
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
-            param_da = cfg['bagCSI']['param_da'][args.i_param]
-            classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
-            classe_vec = [0,4,11]
+            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
+            if args.source_target == 0:
+                classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
+            elif args.source_target == 1:
+                classe_vec = [0,4,11]
             n_class = len(classe_vec)
             use_div = False
             source_loader, target_bags  = get_visda(batch_size=128, drop_last=True,
                         nb_class_in_bag = 10,
                         classe_vec=classe_vec,
-                        bag_size = 50,
+                        bag_size = bag_size,
                         nb_missing_feat = None,
                         apply_miss_feature_source=False)
             if args.expe_name == "":
@@ -169,20 +183,24 @@ if __name__ == '__main__':
 
 
             n_class = cfg['data']['n_class']
+
+
         if len(target_bags) > 10:
             nb_val = len(target_bags)//10
+            nb_test = 2*len(target_bags)//10
             val_bags = target_bags[:nb_val]
-            target_bags = target_bags[nb_val:]
+            test_bags = target_bags[nb_val:nb_test]
+            target_bags = target_bags[nb_test:]
         else:
-            val_bags = target_bags[-2:]
-            target_bags = target_bags[:-2:]
-      
-        X_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
+            val_bags = target_bags[1:2]
+            test_bags = target_bags[2:4]
+            target_bags = target_bags[4:]
+        #%%
+
+        X_test, y_test = extract_data_label(test_bags, type_data='data', type_label='label')
         test_loader = create_data_loader(X_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
         filesave = f"data-{data}-algo-{algo}-st-{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
-         
-
         if args.algo == 'bagCSI':
             param_bag = cfg['bagCSI']['param_bag'][args.i_param]
             filesave += f"-param_bag-{param_bag:2.6f}"
@@ -191,7 +209,6 @@ if __name__ == '__main__':
             filesave += f"-topk-{cfg['bagTopk']['topk']}"
             filesave += f"-param_bag-{param_bag:2.6f}"
         if args.algo == 'daLabelWD':
-            filesave += f"-dist_loss_weight-{dist_loss_weight:2.6f}"
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
             filesave += f"-start_align-{cfg['daLabelWD']['start_align']}"
             filesave += f"-lr-{cfg['daLabelWD']['lr']:2.4f}"
@@ -203,7 +220,15 @@ if __name__ == '__main__':
 
         print(filesave)
 
-    
+        if data == 'toy' or data == 'visda' or data == 'officehome' or data == 'office31': 
+            n_hidden = cfg['model']['n_hidden']
+            input_size = cfg['data']['dim']
+            n_class = cfg['data']['n_class']
+            feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
+            classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
+        elif data == 'mnist_usps':
+            feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
+            classifier = DataClassifierDigits(input_size=1152, n_class=10)
 
         acc_test = 0
         bal_acc_test = 0
@@ -219,17 +244,16 @@ if __name__ == '__main__':
             #%%
             print('bagCSI')
 
-            input_size = dim
             learning_rate = cfg['bagCSI']['lr']
             num_epochs = cfg['bagCSI']['n_epochs']
             val_max = n_class
-
+            model = nn.Sequential(feat_extract,classifier)
             for param_da in [0.1,0.5,1,2]:
-                    model = FullyConnectedNN(input_size, n_hidden= n_hidden, n_class=n_class)
-                    bagCSI_train(model, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
+                    bagCSI_train(feat_extract,classifier, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
                                     learning_rate=learning_rate,
                                     verbose=True)
+                    
                     model.eval()
                     val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
                     if val_err < val_max:
@@ -245,7 +269,6 @@ if __name__ == '__main__':
             #%%
             from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
             print('bagTopk')
-            from bagMTL import bagMTL_train
             from bagTopk import bagTopK_train
             if 1:
                 cuda = True if torch.cuda.is_available() else False
@@ -258,16 +281,12 @@ if __name__ == '__main__':
             val_max = n_class
             for mean_weight in  [0.1,0.5,1,2]:
                 for da_weight in [0]:
-                    input_size = dim
-                    n_hidden = cfg['model']['n_hidden']
                     num_epochs = cfg['bagTopk']['n_epochs']
                     lr = cfg['bagTopk']['lr']
                     topk = cfg['bagTopk']['topk']
                     param_bag = cfg['bagTopk']['param_bag'][args.i_param]
-                    feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
-                    classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-                    classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-                    bagTopK_train(feat_extract,classifier_1,classifier_2, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
+
+                    bagTopK_train(feat_extract,classifier, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
                                 source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.0,
                                 mean_weight=mean_weight,
                                 bag_weight=param_bag,
@@ -275,7 +294,7 @@ if __name__ == '__main__':
                                 lr=lr)
 
 
-                    model = nn.Sequential(feat_extract,classifier_1)
+                    model = nn.Sequential(feat_extract,classifier)
                     val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
                     if val_err < val_max:
                         val_max = val_err

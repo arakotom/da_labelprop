@@ -15,13 +15,15 @@ parser.add_argument("--seed", type=int, default=0)
 args = parser.parse_args()
 seed = args.seed
 current_path = os.getcwd()
+data = 'office31'
+data = 'visda'
+# data = 'officehome'
+n_param = 1
+list_problems = [1]
+
 data = 'officehome'
 n_param = 1
-list_problems = [0,1,2,3,4]
-
-# data = 'office31'
-# n_param = 1
-# list_problems = [0,1,2,3,4,5]
+list_problems = [0,1,2,3,4,5]
 # algo_list = ['bagCSI','daLabelWD']
 # algo_list = ['bagCSI']
 algo_list = ['bagCSI','bagTopk']
