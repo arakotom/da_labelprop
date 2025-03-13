@@ -242,7 +242,7 @@ if __name__ == '__main__':
             n_class = cfg['data']['n_class']
             feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
             classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
-        elif data == 'mnist_usps':
+        elif data == 'mnist_usps' or data == 'usps_mnist':
             feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
             classifier = DataClassifierDigits(input_size=1152, n_class=10)
 
