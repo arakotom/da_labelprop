@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='mnist_usps')
+    parser.add_argument('--data', type=str, default='officehome')
     parser.add_argument('--algo', type=str, default='daLabelWD')
     parser.add_argument('--source_target', type=int, default=4)
     parser.add_argument('--bag_size', type=int, default=50)
@@ -146,8 +146,6 @@ if __name__ == '__main__':
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
             param_bag = cfg['bagCSI']['param_bag'][args.i_param]
-            use_div = True
-            print(source, target)
             source_loader, target_bags = get_officehome(source = source, target = target, batch_size=64,
                                                          drop_last=True,
                          nb_missing_feat = None,
@@ -158,7 +156,6 @@ if __name__ == '__main__':
                 savedir = 'results/officehome'
             else:
                 savedir = 'results/officehome-' + args.expe_name
-            n_class = cfg['data']['n_class']
 
         if data == 'office31':
             source = cfg['data']['files'][args.source_target][0]
@@ -181,10 +178,9 @@ if __name__ == '__main__':
             else:
                 savedir = 'results/office31-' + args.expe_name
 
-
-            n_class = cfg['data']['n_class']
-
-
+        # --------------------------------------------------------------
+        # split the target bags into validation, test and target bags
+        # --------------------------------------------------------------
         if len(target_bags) > 10:
             nb_val = len(target_bags)//10
             nb_test = 2*len(target_bags)//10
@@ -195,10 +191,14 @@ if __name__ == '__main__':
             val_bags = target_bags[1:2]
             test_bags = target_bags[2:4]
             target_bags = target_bags[4:]
-        #%%
+    
 
         X_test, y_test = extract_data_label(test_bags, type_data='data', type_label='label')
         test_loader = create_data_loader(X_test, y_test, batch_size=128, shuffle=False,drop_last=False)
+
+        # --------------------------------------------------------------
+        # filename for saving the results
+        # --------------------------------------------------------------
 
         filesave = f"data-{data}-algo-{algo}-st-{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
         if args.algo == 'bagCSI':
