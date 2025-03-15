@@ -19,7 +19,7 @@ current_path = os.getcwd()
 list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['mnist_usps','officehome','office31']
-list_data = ['office31']
+list_data = ['mnist_usps']
 algo_list = ['bagCSI','bagTopk']
 n_param = 1
 
