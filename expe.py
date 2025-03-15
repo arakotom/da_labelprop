@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--algo', type=str, default='daLabelWD')
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
-    parser.add_argument('--nb_iter', type=int, default=2)
+    parser.add_argument('--nb_iter', type=int, default=10)
     parser.add_argument('--i_param', type=int, default=0)
 
     args = parser.parse_args()
