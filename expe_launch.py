@@ -18,6 +18,7 @@ current_path = os.getcwd()
 
 list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
+list_data = ['mnist_usps','officehome','office31']
 algo_list = ['bagCSI','bagTopk']
 n_param = 1
 
@@ -30,6 +31,10 @@ for data in list_data:
         list_problems = [0,1]
     elif data == 'officehome':
         list_problems = [0,1,2,3,4,5,6,7,8,9,10,11]
+    elif data == 'mnist_usps':
+        list_problems = [0]
+    elif data == 'usps_mnist':
+        list_problems = [0]
 
     for i_p in range(n_param):
         for bag_size in list_bag_size:

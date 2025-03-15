@@ -1,8 +1,8 @@
+# no n_class and n_class in ba 
+
 data:
   dep_sample: 1
-  nb_class_in_bag: 12
   bag_size: 50
-  n_class: 3
   dim: 2048
 model:
   dim_latent: 128
@@ -16,6 +16,8 @@ bagTopk:
   lr: 0.001
   n_epochs: 30
   topk: 1
+  source_weight: 1
+  ent_weight: 0.1
   param_bag:
     - 1
 

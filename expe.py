@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -30,11 +30,11 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='officehome')
+    parser.add_argument('--data', type=str, default='visda')
     parser.add_argument('--algo', type=str, default='daLabelWD')
-    parser.add_argument('--source_target', type=int, default=4)
+    parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
-    parser.add_argument('--nb_iter', type=int, default=5)
+    parser.add_argument('--nb_iter', type=int, default=2)
     parser.add_argument('--i_param', type=int, default=0)
 
     args = parser.parse_args()
@@ -56,7 +56,6 @@ if __name__ == '__main__':
     data = args.data
     algo = args.algo
     dep_sample = cfg['data']['dep_sample']  
-    nb_class_in_bag = cfg['data']['n_class']
     bag_size = cfg['data']['bag_size']
 
     print(args.expe_name, data)
@@ -124,8 +123,6 @@ if __name__ == '__main__':
         if data == 'visda':
 
             bag_size = cfg['data']['bag_size']
-            nb_class_in_bag = cfg['data']['nb_class_in_bag']
-            n_class = cfg['data']['n_class']
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
@@ -136,6 +133,7 @@ if __name__ == '__main__':
             elif args.source_target == 1:
                 classe_vec = [0,4,11]
             n_class = len(classe_vec)
+            nb_class_in_bag = n_class
             use_div = False
             source_loader, target_bags  = get_visda(batch_size=128, drop_last=True,
                         nb_class_in_bag = 10,
@@ -155,7 +153,7 @@ if __name__ == '__main__':
             target = cfg['data']['files'][args.source_target][1]
             bag_size = cfg['data']['bag_size']
             nb_class_in_bag = cfg['data']['nb_class_in_bag']
-            n_class = cfg['data']['n_class']
+            nb_class = cfg['data']['n_class']
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
@@ -223,7 +221,9 @@ if __name__ == '__main__':
         if args.algo == 'bagTopk':
             param_bag = cfg['bagTopk']['param_bag'][args.i_param]
             filesave += f"-topk-{cfg['bagTopk']['topk']}"
-            filesave += f"-param_bag-{param_bag:2.6f}"
+            filesave += f"-sw-{cfg['bagTopk']['source_weight']:2.3f}"
+            filesave += f"-ew-{cfg['bagTopk']['ent_weight']:2.3f}"
+            
         if args.algo == 'daLabelWD':
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
             filesave += f"-start_align-{cfg['daLabelWD']['start_align']}"
@@ -235,16 +235,16 @@ if __name__ == '__main__':
 
 
         print(filesave)
-
-        if data == 'toy' or data == 'visda' or data == 'officehome' or data == 'office31': 
-            n_hidden = cfg['model']['n_hidden']
-            input_size = cfg['data']['dim']
-            n_class = cfg['data']['n_class']
-            feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
-            classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
-        elif data == 'mnist_usps' or data == 'usps_mnist':
-            feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
-            classifier = DataClassifierDigits(input_size=1152, n_class=10)
+        def get_model(data, cfg,n_class):
+            if data == 'toy' or data == 'visda' or data == 'officehome' or data == 'office31': 
+                n_hidden = cfg['model']['n_hidden']
+                input_size = cfg['data']['dim']
+                feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
+                classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
+            elif data == 'mnist_usps' or data == 'usps_mnist':
+                feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
+                classifier = DataClassifierDigits(input_size=1152, n_class=10)
+            return feat_extract, classifier
 
         acc_test = 0
         bal_acc_test = 0
@@ -263,8 +263,12 @@ if __name__ == '__main__':
             learning_rate = cfg['bagCSI']['lr']
             num_epochs = cfg['bagCSI']['n_epochs']
             val_max = n_class
-            model = nn.Sequential(feat_extract,classifier)
             for param_da in [0.1,0.5,1,2]:
+                for param_bag in [0.5,1,2]:
+
+                    feat_extract, classifier = get_model(data, cfg,n_class)
+                    model = nn.Sequential(feat_extract,classifier)
+
                     bagCSI_train(feat_extract,classifier, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
                                     param_bag=param_bag, param_da=param_da,
                                     learning_rate=learning_rate,
@@ -294,31 +298,33 @@ if __name__ == '__main__':
             x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
             test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
+            num_epochs = cfg['bagTopk']['n_epochs']
+            lr = cfg['bagTopk']['lr']
+            topk = cfg['bagTopk']['topk']
+            param_bag = cfg['bagTopk']['param_bag'][args.i_param]
+            source_weight = cfg['bagTopk']['source_weight']
+            ent_weight = cfg['bagTopk']['ent_weight']       
             val_max = n_class
             for mean_weight in  [0.1,0.5,1,2]:
-                for da_weight in [0]:
-                    num_epochs = cfg['bagTopk']['n_epochs']
-                    lr = cfg['bagTopk']['lr']
-                    topk = cfg['bagTopk']['topk']
-                    param_bag = cfg['bagTopk']['param_bag'][args.i_param]
-
+                for param_bag in [0.5,1,2]:
+                    feat_extract, classifier = get_model(data, cfg,n_class)
+                    model = nn.Sequential(feat_extract,classifier)
                     bagTopK_train(feat_extract,classifier, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
-                                source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.0,
+                                source_weight=source_weight,verbose=True, ent_weight=ent_weight,  da_weight=0.0,
                                 mean_weight=mean_weight,
                                 bag_weight=param_bag,
                                 topk=topk,
                                 lr=lr)
 
 
-                    model = nn.Sequential(feat_extract,classifier)
-                    val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
-                    if val_err < val_max:
-                        val_max = val_err
-                        best_param_sw = mean_weight
-                        acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
+                val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                if val_err < val_max:
+                    val_max = val_err
+                    best_param_sw = mean_weight
+                    acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
 
-                    print(f'TopK {best_param_sw}  {val_max:.4f} {bal_acc_test:.4f}')
-    
+                print(f'TopK {best_param_sw}  {val_max:.4f} {bal_acc_test:.4f}')
+
 
 
 

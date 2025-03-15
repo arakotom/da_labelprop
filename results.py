@@ -45,7 +45,7 @@ def get_expe(filename):
 
 list_method = ['bagCSI','daLabelWD']
 method_name = ['bagCSI','daLabelWD']
-data_list =['office31','officehome','visda']
+data_list =['office31','officehome','visda','mnist_usps','usps_mnist']
 
 
 
@@ -90,7 +90,7 @@ for dirpath, dirnames, filenames in os.walk('./results/'):
         list_result.append(result)
 
 list_tab = list_result.copy()
-reference_list = ['office31','officehome','visda']
+reference_list = ['office31','officehome','visda','mnist_usps','usps_mnist']
 
 list_result.sort(key=lambda x: (reference_list.index(x[0]),x[1],x[2], x[5]))
 pre_text = "dataset   n_per_class_anchor  n_neighbours "

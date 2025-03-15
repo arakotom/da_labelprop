@@ -524,14 +524,14 @@ if __name__ == "__main__":
     if  0:
 
         source_loader, target_bags = get_toy(apply_miss_feature_source=True,bag_size=50)
-    if 1:
+    if 0:
         source_loader, target_bags = get_officehome(source = 'Art_Art', target = 'Art_Clipart',
                                                     apply_miss_feature_target=True,
                                                     bag_size=50)
 
-    if 0:
+    if 1:
         source_loader, target_bags = get_usps_mnist()
-    if 0:
+    if 1:
         source_loader, target_bags = get_mnist_usps()
     print(len(source_loader.dataset),len(target_bags))
 

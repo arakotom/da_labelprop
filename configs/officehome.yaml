@@ -30,6 +30,8 @@ bagTopk:
   lr: 0.001
   n_epochs: 300
   topk: 30
+  source_weight: 1
+  ent_weight: 0.1
   param_bag:
     - 1
 

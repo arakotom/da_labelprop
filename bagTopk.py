@@ -46,7 +46,8 @@ def entropy_loss(v):
 
 def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
                     lr=0.001,source_weight=1,
-                    ent_weight=0.1, da_weight=0.,
+                    ent_weight=0.1, 
+                    da_weight=0.,
                     topk=15,
                     mean_weight=0.1,
                     bag_weight=0.1,
