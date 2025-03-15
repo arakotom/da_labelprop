@@ -153,7 +153,7 @@ if __name__ == '__main__':
             target = cfg['data']['files'][args.source_target][1]
             bag_size = cfg['data']['bag_size']
             nb_class_in_bag = cfg['data']['nb_class_in_bag']
-            nb_class = cfg['data']['n_class']
+            n_class = cfg['data']['n_class']
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
