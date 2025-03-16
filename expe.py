@@ -99,6 +99,7 @@ if __name__ == '__main__':
                         nb_class_in_bag = nb_class_in_bag,
                         bag_size = bag_size,
                         nb_missing_feat = None,
+                        dep_sample=dep_sample,
                         apply_miss_feature_source=False)
             if args.expe_name == "":
                 savedir = 'results/mnist_usps'
@@ -114,6 +115,7 @@ if __name__ == '__main__':
                         nb_class_in_bag = nb_class_in_bag,
                         bag_size = bag_size,
                         nb_missing_feat = None,
+                        dep_sample=dep_sample,
                         apply_miss_feature_source=False)
             if args.expe_name == "":
                 savedir = 'results/usps_mnist'
@@ -139,6 +141,7 @@ if __name__ == '__main__':
             source_loader, target_bags  = get_visda(batch_size=128, drop_last=True,
                         nb_class_in_bag = 10,
                         classe_vec=classe_vec,
+                        dep_sample=dep_sample,
                         bag_size = bag_size,
                         nb_missing_feat = None,
                         apply_miss_feature_source=False)
@@ -164,6 +167,7 @@ if __name__ == '__main__':
             source_loader, target_bags = get_officehome(source = source, target = target, batch_size=64,
                                                          drop_last=True,
                          nb_missing_feat = None,
+                         dep_sample=dep_sample,
                         nb_class_in_bag = nb_class_in_bag,
                         bag_size = bag_size )
 
@@ -186,6 +190,7 @@ if __name__ == '__main__':
             source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                         nb_missing_feat = None,
                         nb_class_in_bag = nb_class_in_bag,
+                        dep_sample=dep_sample,
                         bag_size = bag_size )
 
             if args.expe_name == "":
