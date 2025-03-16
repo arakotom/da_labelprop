@@ -1,7 +1,6 @@
 # no n_class and n_class in ba 
 
 data:
-  dep_sample: 1
   bag_size: 50
   dim: 2048
 model:

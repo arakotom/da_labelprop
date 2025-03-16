@@ -12,6 +12,7 @@ import warnings
 from bagCSI import bagCSI_train
 from data import get_toy, get_visda, get_officehome, get_office31
 from data import get_mnist_usps, get_usps_mnist
+from data import get_bag_stats
 from utils import create_data_loader, evaluate_clf, extract_data_label, error_on_bag_prop
 from utils_local import evaluate_data_classifier
 import yaml 
@@ -30,8 +31,8 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='visda')
-    parser.add_argument('--algo', type=str, default='daLabelWD')
+    parser.add_argument('--data', type=str, default='usps_mnist')
+    parser.add_argument('--algo', type=str, default='bagCSI')
     parser.add_argument('--source_target', type=int, default=0)
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=10)
@@ -198,6 +199,8 @@ if __name__ == '__main__':
             else:
                 savedir = 'results/office31-' + args.expe_name
 
+        print(get_bag_stats(target_bags))
+
         # --------------------------------------------------------------
         # split the target bags into validation, test and target bags
         # --------------------------------------------------------------
@@ -212,6 +215,8 @@ if __name__ == '__main__':
             test_bags = target_bags[2:4]
             target_bags = target_bags[4:]
     
+    
+
 
         X_test, y_test = extract_data_label(test_bags, type_data='data', type_label='label')
         test_loader = create_data_loader(X_test, y_test, batch_size=128, shuffle=False,drop_last=False)

@@ -23,6 +23,21 @@ from torchvision import datasets, transforms
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def get_bag_stats(Bag):
+    bag_size = []
+    bag_spread = []
+    for bag in Bag:
+        bag_size.append(bag['data'].shape[0])
+        bag_sp = np.array(bag['prop']).max() - np.array(bag['prop']).min()
+        bag_spread.append(bag_sp)
+    bag_size = np.array(bag_size)
+    bag_spread = np.array(bag_spread)
+    #print(bag_size)
+    stats = {'min':bag_size.min(), 'mean':bag_size.mean(), 'max':bag_size.max(),'len':len(Bag),
+             'min_spread':bag_spread.min(),'mean_spread':bag_spread.mean(),'max_spread':bag_spread.max(),
+             'bag_size':bag_size, 'bag_spread':bag_spread}
+    return stats
+
 
 # Function to extract embeddings
 def extract_embeddings(data_loader):
