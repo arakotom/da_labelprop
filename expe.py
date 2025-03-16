@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=10)
     parser.add_argument('--i_param', type=int, default=0)
+    parser.add_argument('--dep_sample', type=int, default=1)
 
     args = parser.parse_args()
     config_file = f"./configs/{args.data}.yaml"
@@ -55,7 +56,7 @@ if __name__ == '__main__':
 
     data = args.data
     algo = args.algo
-    dep_sample = cfg['data']['dep_sample']  
+    dep_sample = args.dep_sample
     bag_size = cfg['data']['bag_size']
 
     print(args.expe_name, data)
