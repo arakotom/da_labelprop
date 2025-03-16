@@ -19,13 +19,15 @@ current_path = os.getcwd()
 list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['mnist_usps','officehome','office31']
-list_data = ['usps_mnist']
+list_data = ['usps_mnist','visda','office31']
 algo_list = ['bagCSI','bagTopk']
 n_param = 1
 
-expe = 0 # dependent bag size
-#expe = 1 # independent bag size
-
+if 0:
+    expe = 0 # dependent bag size
+elif 1:
+    expe = 1 # independent bag size
+    print('independent bag')
 
 for data in list_data:
 
