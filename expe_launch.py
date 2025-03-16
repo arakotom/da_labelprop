@@ -23,6 +23,9 @@ list_data = ['usps_mnist','visda']
 algo_list = ['bagCSI','bagTopk']
 n_param = 1
 
+expe = 0 # dependent bag size
+expe = 1 # independent bag size
+
 
 for data in list_data:
 
@@ -54,7 +57,7 @@ for data in list_data:
                     else:
                         os.system("rm slurm*.out")
                         print('sbatch tasks')
-                        command = f"sbatch expe.slurm {data:} {algo:} {bag_size} {problem:} {i_p:} {seed:} &"
+                        command = f"sbatch expe.slurm {expe:} {data:} {algo:} {bag_size} {problem:} {i_p:} {seed:} &"
                         os.system(command)
 
 # %%

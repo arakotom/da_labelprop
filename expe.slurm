@@ -54,6 +54,16 @@ set -x
 # avec la partition choisie
 
 #{data:} {algo:} {bag_size} {nb_class_in_bag} {seed:}
-python -u expe.py  --data $1  --algo $2 --seed $6  \
-                   --bag_size $3 --source_target $4 --i_param $5> ./out/out_bs_$1_$2_$4_$3_$6.log
+
+if [ "$1" -eq 0 ]; then
+
+    python -u expe.py  --data $2  --algo $3 --seed $7 --dep_sample 1 \
+                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_bs_$2_$2_$5_$4_$7_$1.log
+fi 
+
+if [ "$1" -eq 1 ]; then
+
+    python -u expe.py  --data $2  --algo $3 --seed $7 --dep_sample 0 \
+                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_bs_$2_$2_$5_$4_$7_$1.log
+fi 
 

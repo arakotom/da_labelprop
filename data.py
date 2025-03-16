@@ -229,6 +229,7 @@ def create_bags_from_data_dep(train_data, train_labels, bag_size, nb_class_in_ba
 def get_usps_mnist(batch_size=32, drop_last=True,
                         nb_missing_feat = 10,
                         nb_class_in_bag = 10,
+                        dep_sample = 1,
                         bag_size = 50,
                         path = './data/',
                         miss_feature=None,
@@ -271,7 +272,11 @@ def get_usps_mnist(batch_size=32, drop_last=True,
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, 
         drop_last=False)
     data,label = next(iter(test_loader))
-    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    if dep_sample == 1:
+        target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    else:
+        target_bags = create_bags_from_data_iid(data, label, bag_size,embeddings
+                                                =None)
 
     return source_loader, target_bags
 
@@ -280,6 +285,7 @@ def get_mnist_usps(batch_size=32, drop_last=True,
                         nb_missing_feat = 10,
                         nb_class_in_bag = 10,
                         bag_size = 50,
+                        dep_sample = 1,
                         path = './data/',
                         miss_feature=None,
                         apply_miss_feature_target=False,
@@ -310,11 +316,14 @@ def get_mnist_usps(batch_size=32, drop_last=True,
     # Load the USPS dataset
 
     test_dataset = datasets.USPS(root='./data', train=True, download=True, transform=transform)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(train_dataset), shuffle=False, 
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, 
         drop_last=False)
     data,label = next(iter(test_loader))
-    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
-
+    if dep_sample == 1:
+        target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    else:
+        target_bags = create_bags_from_data_iid(data, label, bag_size,embeddings
+                                                =None)
     return source_loader, target_bags
 
 
@@ -323,6 +332,7 @@ def get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=32, dr
                          nb_missing_feat = 10,
                         nb_class_in_bag = 10,
                         bag_size = 50,
+                        dep_sample = 1,
                         path = './data/office/',
                         miss_feature=None,
                         apply_miss_feature_target=False,
@@ -355,8 +365,11 @@ def get_officehome(source = 'Art_Art', target = 'Art_Clipart', batch_size=32, dr
     label = torch.from_numpy(data_dic.item()[target][1]).long()
     if apply_miss_feature_target:
         data = data[:,mask].float()
-
-    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    if dep_sample == 1:
+        target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    else:
+        target_bags = create_bags_from_data_iid(data, label, bag_size,embeddings
+                                                =None)
 
     return source_loader, target_bags
 
@@ -365,6 +378,7 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
                          nb_missing_feat = 10,
                          nb_class_in_bag = 5,
                         bag_size = 50,
+                        dep_sample = 1,
                         path = './data/office/office31_resnet50/',
                         miss_feature=None,
                         apply_miss_feature_source=False,
@@ -402,9 +416,11 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
     label = torch.from_numpy(df.values[:,2048]).long()
     if apply_miss_feature_target:
         data = data[:,mask].float()
-
-    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
-
+    if dep_sample == 1:
+        target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    else:
+        target_bags = create_bags_from_data_iid(data, label, bag_size,embeddings
+                                                =None)
     return source_loader, target_bags
 
 
@@ -413,6 +429,7 @@ def get_office31(source = 'amazon_amazon', target = 'amazon_dslr', batch_size=32
 def get_visda(batch_size=32, drop_last=True,
                         nb_missing_feat = 10,
                         nb_class_in_bag = 10,
+                        dep_sample = 1,
                         bag_size = 50,
                         classe_vec=[0,4,11],
                         path = './data/visda/',
@@ -455,9 +472,11 @@ def get_visda(batch_size=32, drop_last=True,
     label = torch.from_numpy(res['y']).long()
     if apply_miss_feature_target:
         data = data[:,mask] 
-
-    target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
-
+    if dep_sample == 1:
+        target_bags = create_bags_from_data_dep(data, label, bag_size, nb_class_in_bag,embeddings=None, max_sample_per_bag=1e6)
+    else:
+        target_bags = create_bags_from_data_iid(data, label, bag_size,embeddings
+                                                =None)
     return source_loader, target_bags
 
 def get_toy(batch_size=32, drop_last=True,
@@ -530,8 +549,8 @@ if __name__ == "__main__":
                                                     bag_size=50)
 
     if 1:
-        source_loader, target_bags = get_usps_mnist()
-    if 1:
+        source_loader, target_bags = get_usps_mnist(dep_sample=1,bag_size=1000)
+    if 0:
         source_loader, target_bags = get_mnist_usps()
     print(len(source_loader.dataset),len(target_bags))
 
