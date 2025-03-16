@@ -109,15 +109,15 @@ if __name__ == '__main__':
             n_class = cfg['data']['n_class']
             param_bag = cfg['bagCSI']['param_bag'][args.i_param]
 
-            source_loader, target_bags  = get_mnist_usps(batch_size=128, drop_last=True,
+            source_loader, target_bags  = get_usps_mnist(batch_size=128, drop_last=True,
                         nb_class_in_bag = nb_class_in_bag,
                         bag_size = bag_size,
                         nb_missing_feat = None,
                         apply_miss_feature_source=False)
             if args.expe_name == "":
-                savedir = 'results/mnist_usps'
+                savedir = 'results/usps_mnist'
             else:
-                savedir = 'results/mnist_usps-' + args.expe_name
+                savedir = 'results/usps_mnist-' + args.expe_name
 
 
         if data == 'visda':
