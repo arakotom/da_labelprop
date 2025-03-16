@@ -58,12 +58,12 @@ set -x
 if [ "$1" -eq 0 ]; then
 
     python -u expe.py  --data $2  --algo $3 --seed $7 --dep_sample 1 \
-                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_bs_$2_$2_$5_$4_$7_$1.log
+                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_dep_$2_$2_$5_$4_$7_$1.log
 fi 
 
 if [ "$1" -eq 1 ]; then
 
     python -u expe.py  --data $2  --algo $3 --seed $7 --dep_sample 0 \
-                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_bs_$2_$2_$5_$4_$7_$1.log
+                    --bag_size $4 --source_target $5 --i_param $6> ./out/out_iid_$2_$2_$5_$4_$7_$1.log
 fi 
 
