@@ -127,9 +127,9 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                             average_target_feature_mean = sum_target_feature_mean/count
 
 
-                    cc_mean_embedding.requires_grad = True
+                    cc_mean_embedding.set_requires_grad = True
                     cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, y_target_prop,50)
-                    cc_mean_embedding.requires_grad = False
+                    cc_mean_embedding.set_requires_grad = False
 
 
 
