@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--nb_iter', type=int, default=10)
     parser.add_argument('--i_param', type=int, default=0)
     parser.add_argument('--dep_sample', type=int, default=1)
+    parser.add_argument('--method', type=str, default='learned')
 
     args = parser.parse_args()
     config_file = f"./configs/{args.data}.yaml"
@@ -234,6 +235,7 @@ if __name__ == '__main__':
             filesave += f"-topk-{cfg['bagTopk']['topk']}"
             filesave += f"-sw-{cfg['bagTopk']['source_weight']:2.3f}"
             filesave += f"-ew-{cfg['bagTopk']['ent_weight']:2.3f}"
+            filesave += f"-method-{args.method}"
             
         if args.algo == 'daLabelWD':
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
@@ -324,6 +326,7 @@ if __name__ == '__main__':
                                 source_weight=source_weight,verbose=True, ent_weight=ent_weight,  da_weight=0.0,
                                 mean_weight=mean_weight,
                                 bag_weight=param_bag,
+                                method=args.method,
                                 topk=topk,
                                 lr=lr)
 

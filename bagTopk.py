@@ -40,15 +40,27 @@ def entropy_loss(v):
     """
     return torch.mean(torch.sum(- torch.softmax(v, dim=1) * torch.log_softmax(v, dim=1), 1))
 
+def update_mean_embedding(target_feature_mean,mean_embedding, y_target_prop,n_step): 
+    optimizer_mean = optim.Adam([mean_embedding], lr=0.01,betas=(0.9, 0.999),weight_decay=0.001)
+    #optimizer_mean = optim.SGD([mean_embedding], lr=0.00001,weight_decay=0.001)
 
+    for i in range(n_step):
+        #normalized_mean_embedding = torch.nn.functional.normalize(mean_embedding, p=2, dim=0)   
+        y_pred = mean_embedding@y_target_prop
+        loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
+        optimizer_mean.zero_grad()
+        loss.backward()
+        #print(loss.item())
+        optimizer_mean.step()
+    return mean_embedding
 
 
 
 def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
                     lr=0.001,source_weight=1,
                     ent_weight=0.1, 
-                    da_weight=0.,
                     topk=15,
+                    method = 'learned',
                     mean_weight=0.1,
                     bag_weight=0.1,
                     verbose=False,large_source_loader=None):
@@ -63,7 +75,9 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
     optimizer_feat = optim.Adam(feature_extractor.parameters(), lr=lr,betas=(0.9, 0.999))
     optimizer_c1 = optim.Adam(classifier_1.parameters(), lr=lr,betas=(0.9, 0.999))
     #optimizer_c2 = optim.Adam(classifier_2.parameters(), lr=lr,betas=(0.9, 0.999))
-    
+
+
+    first_iter = True
     for epoch in range(num_epochs):
         loss_1_epoch = 0
         loss_2_epoch = 0
@@ -75,7 +89,7 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
             x_target = target_bags[i_bag]['data'].to(device).float()
             y_target_prop = torch.tensor(target_bags[i_bag]['prop']).to(device)
 
-            
+
             # source loss
             source_feature = feature_extractor(x_train)
             outputs_1 = classifier_1(source_feature)
@@ -94,82 +108,65 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
             msoftmax = nn.Softmax(dim=1)(outputs_target).mean(dim=0)
             ent_loss -= ent_weight* torch.sum(-msoftmax * torch.log(msoftmax + 1e-5) )
 
-            # topk mean embedding loss
-            arg_prop = torch.argsort(y_target_prop,descending=True)
-            n_max = min(topk,len(arg_prop))
-            loss_mean = 0
-            for j in range(n_max):
-                ind = arg_prop[j]
-                source_feature_data = source_feature*(y_train==ind).float().view(-1,1)
-                #print(source_feature_data.size())
-                target_feature_data = target_feature*(y_target_prop[ind]).float().view(-1,1)
-                #print(target_feature_data.size())
-                loss_mean += torch.mean(torch.abs(source_feature_data.mean(dim=0) - target_feature_data.mean(dim=0)))**2
+            if method == 'learned':
+                ### learning the mean embedding
+                if epoch == 0 :
+                    if first_iter:
+                        cc_mean_embedding = torch.randn(source_feature.shape[1],n_class,requires_grad=True).to(device)
+                        with torch.no_grad():
+                            target_feature_mean = target_feature.mean(dim=0)
+                            count = 1
+                            sum_target_feature_mean = target_feature_mean.clone()
+                            average_target_feature_mean = sum_target_feature_mean/count
+                        first_iter = False
+
+                    else:
+                        with torch.no_grad():
+                            sum_target_feature_mean += target_feature_mean
+                            count += 1
+                            average_target_feature_mean = sum_target_feature_mean/count
+
+
+                    cc_mean_embedding.requires_grad = True
+                    cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, y_target_prop,50)
+                    cc_mean_embedding.requires_grad = False
+
+
+
+                arg_prop = torch.argsort(y_target_prop,descending=True)
+                n_max = min(topk,len(arg_prop))
+                loss_mean = 0
+                for j in range(n_max):
+                    ind = arg_prop[j]
+                    source_feature_data = source_feature*(y_train==ind).float().view(-1,1)
+                    loss_mean += torch.mean(torch.abs(source_feature_data.mean(dim=0) - cc_mean_embedding[:,ind]))**2
                 
-            # loss_mean = 0
-            # for j in range(n_class):
-            #     source_feature_data = source_feature*(y_train==j).float().view(-1,1)
-            #     #print(source_feature_data.size())
-            #     target_feature_data = target_feature*(y_target_prop[j]).float().view(-1,1)
-            #     #print(target_feature_data.size())
-            #     loss_mean += torch.mean(torch.abs(source_feature_data.mean(dim=0) - target_feature_data.mean(dim=0)))**2
-                
+
+            elif method == 'fix':
+                # topk mean embedding loss
+                arg_prop = torch.argsort(y_target_prop,descending=True)
+                n_max = min(topk,len(arg_prop))
+                loss_mean = 0
+                for j in range(n_max):
+                    ind = arg_prop[j]
+                    source_feature_data = source_feature*(y_train==ind).float().view(-1,1)
+                    #print(source_feature_data.size())
+                    target_feature_data = target_feature*(y_target_prop[ind]).float().view(-1,1)
+                    #print(target_feature_data.size())
+                    loss_mean += torch.mean(torch.abs(source_feature_data.mean(dim=0) - target_feature_data.mean(dim=0)))**2
+            else:  
+                raise ValueError('method not recognized')
+
+            
 
 
-
-            #  pseudo label
-            if epoch > 0 and da_weight > 0:
-                in_test = torch.where(y_target_prop > 0)[0]
-                x_a, y_a = next(iter(large_source_loader))
-                x_a = x_a.to(device).float()
-                y_a = y_a.to(device)
-                #print(y_a.shape)
-                # keep all training data with the same label
-                ind_tr = []
-                for cls in  in_test:
-                    ind = torch.where(y_a == cls)[0]
-                    ind_tr.append(ind)
-                ind_tr = torch.cat(ind_tr)
-                source_feature_align = feature_extractor(x_a)
-                source_feature_align = source_feature_align[ind_tr]
-                y_a = y_a[ind_tr]
-
-
-                n_1 = source_feature_align.size(0)  
-                n_2 = target_feature.size(0)     
-                a = torch.from_numpy(ot.unif(n_1)).float()
-                b = torch.from_numpy(ot.unif(n_2)).float()
-                y_target_prop = y_target_prop[in_test]  # keep only the classes in the target domain
-                for i_c, cls in enumerate(in_test):
-                    ind = torch.where(y_a  == cls)[0]
-                    n_in_class = len(ind)          
-                    a[ind] = y_target_prop[i_c]/n_in_class if n_in_class > 0 else 0.0
-                b /= torch.sum(b)
-                a /= torch.sum(a)
-                b = b.float()
-                a = a.float()
-                if torch.sum(a) > 0 :
-                    with torch.no_grad():
-                        M = dist_torch(source_feature_align,target_feature)
-                        gamma = ot.emd(a,b,M)
-                        gamma = gamma.to(device)
-                        ind_a = torch.argmax(gamma, dim=0)
-                        y_t_pred = y_a[ind_a]
-                        y_t = torch.Tensor(target_bags[i_bag]['label']).to(device).long()
-                    bc = torch.sum(y_t_pred.eq(y_t))/len(y_t)
-                    #print(bc)
-                    output_target_ps = classifier_1(target_feature)
-                    loss_ps = criterion(output_target_ps, y_t_pred)
-            else:
-                bc = 0
-                loss_ps = 0.
 
             # optimizing feature extractor and classifier 1
 
             optimizer_feat.zero_grad()
             optimizer_c1.zero_grad()
             loss_1 = source_weight*loss_source_1 + bag_weight*loss_bag 
-            loss_1 += ent_loss + da_weight*loss_ps + mean_weight*loss_mean
+            loss_1 += ent_loss  + mean_weight*loss_mean
             loss_1.backward()
             optimizer_feat.step()
             optimizer_c1.step()
@@ -231,7 +228,7 @@ if __name__ == '__main__':
 
         plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
     
-    elif 0:
+    elif 1:
     
         from utils_local import loop_iterable
 
@@ -249,13 +246,13 @@ if __name__ == '__main__':
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
-        lr = cfg['bagMTL']['lr']
-        num_epochs = cfg['bagMTL']['n_epochs']
+        lr = cfg['bagTopk']['lr']
+        num_epochs = cfg['bagTopk']['n_epochs']
         source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                     nb_missing_feat = None,
                     nb_class_in_bag = nb_class_in_bag,
                     bag_size = bag_size )
-    elif 1:
+    elif 0:
         config_file = './configs/visda.yaml'
         import yaml
         from data import get_visda
@@ -263,8 +260,6 @@ if __name__ == '__main__':
         with open(config_file) as file:
             cfg = yaml.load(file, Loader=yaml.FullLoader)
         bag_size = cfg['data']['bag_size']
-        nb_class_in_bag = cfg['data']['nb_class_in_bag']
-        n_class = cfg['data']['n_class']
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
@@ -295,7 +290,8 @@ if __name__ == '__main__':
                    source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.,
                    mean_weight=1,
                    bag_weight=1,
-                   topk=1,
+                    method='learned',
+                   topk=15,
                    lr=lr,large_source_loader=large_source_loader)
 
 
@@ -334,29 +330,25 @@ if __name__ == '__main__':
 
     
     #%%
-    
-    
-    
-    
-    
-    data_mtl = torch.cat([train_feat_mtl, test_feat_mtl], dim=0)
-    scaler = StandardScaler()
-    data_mtl = scaler.fit_transform(data_mtl)
-    z_mtl = TSNE(n_components=2,max_iter=100).fit_transform(data_mtl)
-    x_a_mtl = z_mtl[:train_feat_mtl.size(0)]
-    x_t_mtl = z_mtl[train_feat_mtl.size(0):]
-
-    
-    classe = [2,3,4]
 
 
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(5, 4))
-    for i in classe:
-        plt.scatter(x_a_mtl[train_label==i, 0], x_a_mtl[train_label==i, 1], label=f'class {i}',s=100)
-        plt.scatter(x_t_mtl[test_label==i, 0], x_t_mtl[test_label==i,1], marker='x')
-    plt.legend()
-    plt.title('MTL')
-    plt.show()# %%
+    bag = target_bags[0]
+    x_target = bag['data']
+    y_target_prop = torch.tensor(bag['prop']).to(device)
+    y_target = torch.tensor(bag['label']).to(device)
 
+    mean_embedding = torch.randn(x_target.size(1),n_class,requires_grad=True).to(device)
+    mean_embedding = update_mean_embedding(x_target.mean(dim=0),mean_embedding, y_target_prop,1000)
+    print(x_target.mean(dim=0), mean_embedding@y_target_prop)
+    print(mean_embedding)
+
+    normal = torch.nn.functional.normalize(mean_embedding, p=2, dim=0) 
+    print(torch.sum(normal**2,dim=0))
+    #%%
+    y_target_prop = torch.tensor(bag['prop']).to(device)
+    v = x_target.mean(dim=0).unsqueeze(1)
+    y_target_prop = y_target_prop.unsqueeze(0)
+    M = y_target_prop.T@y_target_prop + torch.diag(torch.ones(n_class)*1e-5)
+    D = v@y_target_prop@(torch.linalg.inv(M))
+    D.shape
 # %%
