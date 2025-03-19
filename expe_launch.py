@@ -20,7 +20,7 @@ list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['mnist_usps','officehome','office31']
 list_data = ['usps_mnist','visda','office31','mnist_usps','officehome']
-# list_data = ['usps_mnist']
+list_data = ['usps_mnist']
 
 algo_list = ['bagTopk']
 n_param = 1
