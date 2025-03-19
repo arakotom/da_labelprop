@@ -112,7 +112,8 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                 ### learning the mean embedding
                 if epoch == 0 :
                     if first_iter:
-                        cc_mean_embedding = torch.randn(source_feature.shape[1],n_class,requires_grad=True).to(device)
+                        cc_mean_embedding = torch.randn(source_feature.shape[1],n_class,requires_grad=True,device=device)
+
                         with torch.no_grad():
                             target_feature_mean = target_feature.mean(dim=0)
                             count = 1
@@ -127,9 +128,9 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                             average_target_feature_mean = sum_target_feature_mean/count
 
 
-                    cc_mean_embedding.set_requires_grad = True
+                    cc_mean_embedding.requires_grad_ = True
                     cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, y_target_prop,50)
-                    cc_mean_embedding.set_requires_grad = False
+                    cc_mean_embedding.requires_grad_ = False
 
 
 
