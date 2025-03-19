@@ -190,7 +190,7 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
         loss_1_epoch /= len(source_loader)
         loss_2_epoch /= len(source_loader)
         if verbose:
-            print(f'Epoch [{epoch+1}/{num_epochs}], Loss S+T: {loss_1_epoch:.4f} Loss S: {loss_2_epoch:.4f} bc: {bc:.4f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Loss S+T: {loss_1_epoch:.4f} ')
 
 
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
     classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
     #classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
     bagTopK_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
-                   source_weight=0.1,verbose=True, ent_weight=0.1,  da_weight=0.,
+                   source_weight=0.1,verbose=True, ent_weight=0.1,
                    mean_weight=1,
                    bag_weight=1,
                     method='learned',
