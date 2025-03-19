@@ -323,7 +323,7 @@ if __name__ == '__main__':
                     feat_extract, classifier = get_model(data, cfg,n_class)
                     model = nn.Sequential(feat_extract,classifier)
                     bagTopK_train(feat_extract,classifier, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
-                                source_weight=source_weight,verbose=True, ent_weight=ent_weight,  da_weight=0.0,
+                                source_weight=source_weight,verbose=True, ent_weight=ent_weight,
                                 mean_weight=mean_weight,
                                 bag_weight=param_bag,
                                 method=args.method,
