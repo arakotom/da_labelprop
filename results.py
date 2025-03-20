@@ -93,7 +93,7 @@ for i, result in enumerate(list_result):
 
     if i==0 or dataset != dataset_old:
         print('-------------------------------------------------------')
-        header = f"{'Data':10} ST {'Algo':8}   {'BS':3}   {'Method':7} {'dep':1}"
+        header = f"{'Data':10} ST {'Algo':8} {'BS':3}   {'Method':7} {'dep':1}"
         print(header)
         print('-------------------------------------------------------')
 
