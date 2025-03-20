@@ -43,8 +43,8 @@ def get_expe(filename):
 
  
 
-list_method = ['bagCSI','daLabelWD']
-method_name = ['bagCSI','daLabelWD']
+#list_method = ['bagCSI','daLabelWD']
+#method_name = ['bagCSI','daLabelWD']
 data_list =['office31','officehome','visda','mnist_usps','usps_mnist']
 
 
@@ -66,14 +66,7 @@ for dirpath, dirnames, filenames in os.walk('./results/'):
         dep_sample = expe['dep_sample']
         st = int(expe['st'])
         nb_class_in_bag = int(expe['nb_class_in_bag'])
-        if algo == 'daLabelWD':
-            dist_loss_weight = float(expe['dist_loss_weight'])
-            start_align = int(expe['start_align'])
-            it = int(expe['iter_domain_classifier'])
-        else:
-            dist_loss_weight = 0
-            start_align = 0
-            it = 0
+        method = expe['method']
         
         df = np.load(os.path.join(dirpath, filename),allow_pickle=True)
         i_dataset = data_list.index(dataset)
@@ -86,7 +79,7 @@ for dirpath, dirnames, filenames in os.walk('./results/'):
 
 
 
-        result = [dataset, st, algo, bag_size,nb_class_in_bag, start_align, it, dep_sample, dist_loss_weight, m_res_acc, s_res_acc, non_nan_counts]
+        result = [dataset, st, algo, bag_size,nb_class_in_bag, dep_sample,method, m_res_acc, s_res_acc, non_nan_counts]
         list_result.append(result)
 
 list_tab = list_result.copy()
@@ -96,7 +89,7 @@ list_result.sort(key=lambda x: (reference_list.index(x[0]),x[1],x[2], x[5]))
 pre_text = "dataset   n_per_class_anchor  n_neighbours "
 dataset_old = ''
 for i, result in enumerate(list_result):
-    dataset, st, algo,bag_size, nb_class_in_bag, start_align, it, dep_sample, dist_loss_weight, m_res_acc, s_res_acc,nn_count = result
+    dataset, st, algo,bag_size, nb_class_in_bag, dep_sample,method, m_res_acc, s_res_acc,nn_count = result
 
     if i==0 or dataset != dataset_old:
         print('-------------------------------------------------------')
@@ -106,7 +99,7 @@ for i, result in enumerate(list_result):
 
         dataset_old = dataset
 
-    texte = f"{dataset:10} {st:}  {algo:12} {bag_size:4} {start_align:} {it:}  {dist_loss_weight:7} "
+    texte = f"{dataset:10} {st:}  {algo:12} {bag_size:4} {method:} {dep_sample:1} "
     texte += f" {m_res_acc:2.2f} $\\pm$ {s_res_acc:2.2f} \t {nn_count:3}"
     print(texte)
 
