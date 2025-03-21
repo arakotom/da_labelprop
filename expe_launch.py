@@ -21,7 +21,7 @@ list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['mnist_usps','officehome','office31']
 list_data = ['visda','office31','mnist_usps','officehome']
 list_data = ['officehome']
-algo_list = ['bagLME','bagCSI']
+algo_list = ['bagLME']
 n_param = 1
 
 if 1:

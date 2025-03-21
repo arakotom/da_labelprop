@@ -226,11 +226,11 @@ if __name__ == '__main__':
             if args.method == 'learned':
                 topk = cfg['bagLME']['topk_lme']
             else:
-                topk = cfg['bagTopk']['topk_fix']
+                topk = cfg['bagLME']['topk_fix']
             filesave += f"-method-{args.method}"
             filesave += f"-topk-{topk}"
-            filesave += f"-sw-{cfg['bagTopk']['source_weight']:2.3f}"
-            filesave += f"-ew-{cfg['bagTopk']['ent_weight']:2.3f}"
+            filesave += f"-sw-{cfg['bagLME']['source_weight']:2.3f}"
+            filesave += f"-ew-{cfg['bagLME']['ent_weight']:2.3f}"
             
         if args.algo == 'daLabelWD':
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
