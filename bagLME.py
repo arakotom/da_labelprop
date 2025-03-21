@@ -49,7 +49,7 @@ def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, da
         loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
         for j in range(n_class):
             source_feature_data = x_source*(y_source==j).float().view(-1,1)
-            loss += lamb*torch.mean(torch.abs(source_feature_data.mean(dim=0) - mean_embedding[:,j]))**2
+            loss += lamb*torch.mean(torch.abs(source_feature_data.mean(dim=0).to(device) - mean_embedding[:,j]))**2
         optimizer_mean.zero_grad()
         loss.backward()
         optimizer_mean.step()
