@@ -95,7 +95,6 @@ if __name__ == '__main__':
             bag_size = cfg['data']['bag_size']
             nb_class_in_bag = cfg['data']['nb_class_in_bag']
             n_class = cfg['data']['n_class']
-            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
 
             source_loader, target_bags  = get_mnist_usps(batch_size=128, drop_last=True,
                         nb_class_in_bag = nb_class_in_bag,
@@ -111,7 +110,6 @@ if __name__ == '__main__':
             bag_size = cfg['data']['bag_size']
             nb_class_in_bag = cfg['data']['nb_class_in_bag']
             n_class = cfg['data']['n_class']
-            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
 
             source_loader, target_bags  = get_usps_mnist(batch_size=128, drop_last=True,
                         nb_class_in_bag = nb_class_in_bag,
@@ -132,7 +130,6 @@ if __name__ == '__main__':
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
             dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
-            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
             if args.source_target == 0:
                 classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
             elif args.source_target == 1:
@@ -164,7 +161,6 @@ if __name__ == '__main__':
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
 
-            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
             source_loader, target_bags = get_officehome(source = source, target = target, batch_size=64,
                                                          drop_last=True,
                          nb_missing_feat = None,

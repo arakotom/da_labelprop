@@ -65,6 +65,7 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
                     mean_weight=0.1,
                     bag_weight=0.1,
                     lmesource_weight=0.1,
+                    lmesource_step=500,
                     verbose=False,large_source_loader=None):
     feature_extractor.train()
     classifier_1.train()
@@ -127,7 +128,7 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
                             average_target_feature_mean = sum_target_feature_mean/count
                     cc_mean_embedding.requires_grad_ = True
                     cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, 
-                                                                y_target_prop,data_source, n_step=200,
+                                                                y_target_prop,data_source, n_step=lmesource_step,
                                                                 lamb=lmesource_weight)
                     cc_mean_embedding.requires_grad_ = False
                 else:
