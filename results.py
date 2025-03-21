@@ -66,8 +66,10 @@ for dirpath, dirnames, filenames in os.walk('./results/'):
         dep_sample = expe['dep_sample']
         st = int(expe['st'])
         nb_class_in_bag = int(expe['nb_class_in_bag'])
-        method = expe['method']
-        
+        try:
+            method = expe['method']
+        except:
+            method = '-'
         df = np.load(os.path.join(dirpath, filename),allow_pickle=True)
         i_dataset = data_list.index(dataset)
         config = df['config']
