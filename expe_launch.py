@@ -19,9 +19,9 @@ current_path = os.getcwd()
 list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['mnist_usps','officehome','office31']
-list_data = ['visda','office31','mnist_usps','officehome']
-list_data = ['officehome']
-algo_list = ['bagLME']
+list_data = ['visda','office31','mnist_usps','usps_mnist']
+#list_data = ['officehome']
+algo_list = ['bagLME','bagCSI']
 n_param = 1
 
 if 1:

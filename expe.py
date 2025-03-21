@@ -19,6 +19,19 @@ import yaml
 import sys
 from models import FeatureExtractor, DataClassifier, FeatureExtractorDigits, DataClassifierDigits
 warnings.filterwarnings("ignore", category=UserWarning) 
+
+def get_model(data, cfg,n_class):
+    if data == 'toy' or data == 'visda' or data == 'officehome' or data == 'office31': 
+        n_hidden = cfg['model']['n_hidden']
+        input_size = cfg['data']['dim']
+        feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
+        classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
+    elif data == 'mnist_usps' or data == 'usps_mnist':
+        feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
+        classifier = DataClassifierDigits(input_size=1152, n_class=10)
+    return feat_extract, classifier
+
+
 if __name__ == '__main__':
 
 
@@ -243,16 +256,6 @@ if __name__ == '__main__':
 
 
         print(filesave)
-        def get_model(data, cfg,n_class):
-            if data == 'toy' or data == 'visda' or data == 'officehome' or data == 'office31': 
-                n_hidden = cfg['model']['n_hidden']
-                input_size = cfg['data']['dim']
-                feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
-                classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
-            elif data == 'mnist_usps' or data == 'usps_mnist':
-                feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
-                classifier = DataClassifierDigits(input_size=1152, n_class=10)
-            return feat_extract, classifier
 
         acc_test = 0
         bal_acc_test = 0

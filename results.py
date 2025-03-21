@@ -101,7 +101,7 @@ for i, result in enumerate(list_result):
 
         dataset_old = dataset
 
-    texte = f"{dataset:10} {st:}  {algo:8} {bag_size:3}   {method:7} {dep_sample:1} "
+    texte = f"{dataset:10} {st:2}  {algo:8} {bag_size:3}   {method:7} {dep_sample:1} "
     texte += f" {m_res_acc:2.2f} $\\pm$ {s_res_acc:2.2f} \t {nn_count:3}"
     print(texte)
 
