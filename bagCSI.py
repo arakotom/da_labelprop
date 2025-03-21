@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
         plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
     
-    elif 0:
+    elif 1:
     
         from utils_local import loop_iterable
 
@@ -142,13 +142,13 @@ if __name__ == '__main__':
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
-        lr = cfg['bagMTL']['lr']
-        num_epochs = cfg['bagMTL']['n_epochs']
+        lr = cfg['bagCSI']['lr']
+        num_epochs = cfg['bagCSI']['n_epochs']
         source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                     nb_missing_feat = None,
                     nb_class_in_bag = nb_class_in_bag,
                     bag_size = bag_size )
-    elif 1:
+    elif 0:
         config_file = './configs/visda.yaml'
         import yaml
         from data import get_visda
@@ -173,18 +173,18 @@ if __name__ == '__main__':
                     nb_missing_feat = None,
                     apply_miss_feature_source=False)
 
-    #%%
+    
 
-    from models import FullyConnectedNN, FeatureExtractor, DataClassifier
+    from models import  FeatureExtractor, DataClassifier
 
     # Initialize the model, loss function, and optimizer        
     feat_extract = FeatureExtractor(input_dim=dim, n_hidden=n_hidden, output_dim=n_hidden)
     classifier = DataClassifier(input_dim=n_hidden, n_class=n_class)
     
     bagCSI_train(feat_extract,classifier, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
-                    param_bag=1, param_da=10,verbose=True)
+                    param_bag=1, param_da=1,verbose=True)
 
-    #%%
+    
     
     from utils import evaluate_clf, create_data_loader, extract_data_label
     x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
@@ -193,6 +193,38 @@ if __name__ == '__main__':
     model.to(device)
     acc, bal_acc, cm = evaluate_clf(model, test_loader,n_classes=n_class,return_pred=False)
     print(f'Accuracy: {bal_acc:.4f}')
+
+#%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     #%%

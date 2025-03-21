@@ -40,42 +40,40 @@ def entropy_loss(v):
     """
     return torch.mean(torch.sum(- torch.softmax(v, dim=1) * torch.log_softmax(v, dim=1), 1))
 
-def update_mean_embedding(target_feature_mean,mean_embedding, y_target_prop,n_step): 
+def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, data_source,n_step=100,lamb=0.1): 
     optimizer_mean = optim.Adam([mean_embedding], lr=0.01,betas=(0.9, 0.999),weight_decay=0.001)
-    #optimizer_mean = optim.SGD([mean_embedding], lr=0.00001,weight_decay=0.001)
-
+    n_class = len(y_target_prop)
+    x_source, y_source = data_source
     for i in range(n_step):
-        #normalized_mean_embedding = torch.nn.functional.normalize(mean_embedding, p=2, dim=0)   
         y_pred = mean_embedding@y_target_prop
         loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
+        for j in range(n_class):
+            source_feature_data = x_source*(y_source==j).float().view(-1,1)
+            loss += lamb*torch.mean(torch.abs(source_feature_data.mean(dim=0) - mean_embedding[:,j]))**2
         optimizer_mean.zero_grad()
         loss.backward()
-        #print(loss.item())
         optimizer_mean.step()
     return mean_embedding
 
 
 
-def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
+def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_class, num_epochs=100,device='cpu',
                     lr=0.001,source_weight=1,
-                    ent_weight=0.1, 
+                    ent_weight=0, 
                     topk=15,
                     method = 'learned',
                     mean_weight=0.1,
                     bag_weight=0.1,
+                    lmesource_weight=0.1,
                     verbose=False,large_source_loader=None):
     feature_extractor.train()
     classifier_1.train()
-    #classifier_2.train()
     feature_extractor.to(device)
     classifier_1.to(device)
-    #classifier_2.to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer_feat = optim.Adam(feature_extractor.parameters(), lr=lr,betas=(0.9, 0.999))
     optimizer_c1 = optim.Adam(classifier_1.parameters(), lr=lr,betas=(0.9, 0.999))
-    #optimizer_c2 = optim.Adam(classifier_2.parameters(), lr=lr,betas=(0.9, 0.999))
-
 
     first_iter = True
     for epoch in range(num_epochs):
@@ -112,6 +110,7 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                 ### learning the mean embedding
                 if epoch == 0 :
                     if first_iter:
+                        data_source = extract_feature(nn.Sequential(feature_extractor),source_loader, device=device)
                         cc_mean_embedding = torch.randn(source_feature.shape[1],n_class,requires_grad=True,device=device)
 
                         with torch.no_grad():
@@ -126,13 +125,17 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                             sum_target_feature_mean += target_feature_mean
                             count += 1
                             average_target_feature_mean = sum_target_feature_mean/count
-
-
                     cc_mean_embedding.requires_grad_ = True
-                    cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, y_target_prop,50)
+                    cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, 
+                                                                y_target_prop,data_source, n_step=200,
+                                                                lamb=lmesource_weight)
                     cc_mean_embedding.requires_grad_ = False
-
-
+                else:
+                    cc_mean_embedding.requires_grad_ = True
+                    cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, 
+                                                                y_target_prop,data_source, n_step=2,
+                                                                lamb=lmesource_weight)
+                    cc_mean_embedding.requires_grad_ = False
 
                 arg_prop = torch.argsort(y_target_prop,descending=True)
                 n_max = min(topk,len(arg_prop))
@@ -141,10 +144,11 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
                     ind = arg_prop[j]
                     source_feature_data = source_feature*(y_train==ind).float().view(-1,1)
                     loss_mean += torch.mean(torch.abs(source_feature_data.mean(dim=0) - cc_mean_embedding[:,ind]))**2
-                
+
+
 
             elif method == 'fix':
-                # topk mean embedding loss
+                # using simple mean embedding  and topk
                 arg_prop = torch.argsort(y_target_prop,descending=True)
                 n_max = min(topk,len(arg_prop))
                 loss_mean = 0
@@ -175,21 +179,12 @@ def bagTopK_train(feature_extractor,classifier_1, source_loader, target_bags, n_
 
 
 
-            #optimizing classifier 2
-            # source_feature = feature_extractor(x_train)
-            # outputs_2 = classifier_2(source_feature)
-            # loss_source_2 = criterion(outputs_2, y_train)
-            # optimizer_c2.zero_grad()
-            # loss_2 = loss_source_2
-            # loss_2.backward()
-            # optimizer_c2.step()
-            # loss_2_epoch += loss_2.item()
+
 
 
 
 
         loss_1_epoch /= len(source_loader)
-        loss_2_epoch /= len(source_loader)
         if verbose:
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss S+T: {loss_1_epoch:.4f} ')
 
@@ -247,8 +242,8 @@ if __name__ == '__main__':
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
-        lr = cfg['bagTopk']['lr']
-        num_epochs = cfg['bagTopk']['n_epochs']
+        lr = cfg['bagLME']['lr']
+        num_epochs = cfg['bagLME']['n_epochs']
         source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                     nb_missing_feat = None,
                     nb_class_in_bag = nb_class_in_bag,
@@ -264,7 +259,7 @@ if __name__ == '__main__':
         dim = cfg['data']['dim']
         dim_latent = cfg['model']['dim_latent']
         n_hidden = cfg['model']['n_hidden']
-        lr = cfg['bagTopk']['lr']
+        lr = cfg['bagLME']['lr']
         num_epochs = 30
         classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
         #classe_vec = [0,4,11]
@@ -287,12 +282,13 @@ if __name__ == '__main__':
     feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
     classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
     #classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-    bagTopK_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
-                   source_weight=0.1,verbose=True, ent_weight=0.1,
+    bagLME_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
+                   source_weight=1,verbose=True, ent_weight=0.0,
                    mean_weight=1,
                    bag_weight=1,
-                    method='learned',
-                   topk=15,
+                   lmesource_weight=1,
+                    method='fix',
+                   topk=1,
                    lr=lr,large_source_loader=large_source_loader)
 
 
@@ -312,44 +308,8 @@ if __name__ == '__main__':
 
 
 
-    #%%
-    # train_feat_mtl, train_label = extract_feature(nn.Sequential(feat_extract), source_loader, device=device)
-    # test_feat_mtl, test_label = extract_feature(nn.Sequential(feat_extract), test_loader, device=device)
-    # test_feat_mtl = target_bags[0]['data']
-    # feat_extract.eval()
-    # test_feat_mtl = feat_extract(test_feat_mtl)
-    # y_target_prop = torch.tensor(target_bags[0]['prop']).to(device)
-    # n_class = len(y_target_prop)
-    # for j in range(n_class):
-    #     source_feature_data = train_feat_mtl*(train_label==j).float().view(-1,1)
-    #     print(source_feature_data.size())
-    #     target_feature_data = test_feat_mtl*(y_target_prop[j]).float().view(-1,1)
-    #     print(target_feature_data.size())
-    #     loss_da = torch.mean(torch.abs(source_feature_data.mean(dim=0) - target_feature_data.mean(dim=0)))**2
-        
 
 
-    
-    #%%
 
 
-    bag = target_bags[0]
-    x_target = bag['data']
-    y_target_prop = torch.tensor(bag['prop']).to(device)
-    y_target = torch.tensor(bag['label']).to(device)
-
-    mean_embedding = torch.randn(x_target.size(1),n_class,requires_grad=True).to(device)
-    mean_embedding = update_mean_embedding(x_target.mean(dim=0),mean_embedding, y_target_prop,1000)
-    print(x_target.mean(dim=0), mean_embedding@y_target_prop)
-    print(mean_embedding)
-
-    normal = torch.nn.functional.normalize(mean_embedding, p=2, dim=0) 
-    print(torch.sum(normal**2,dim=0))
-    #%%
-    y_target_prop = torch.tensor(bag['prop']).to(device)
-    v = x_target.mean(dim=0).unsqueeze(1)
-    y_target_prop = y_target_prop.unsqueeze(0)
-    M = y_target_prop.T@y_target_prop + torch.diag(torch.ones(n_class)*1e-5)
-    D = v@y_target_prop@(torch.linalg.inv(M))
-    D.shape
 # %%

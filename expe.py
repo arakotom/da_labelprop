@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 
     
-    #sys.argv = ['']
+    sys.argv = ['']
     args = argparse.Namespace()
 
     parser = argparse.ArgumentParser(description='training llp models')
@@ -31,9 +31,9 @@ if __name__ == '__main__':
     # general parameters
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--expe_name', type=str,default="")
-    parser.add_argument('--data', type=str, default='usps_mnist')
+    parser.add_argument('--data', type=str, default='office31')
     parser.add_argument('--algo', type=str, default='bagCSI')
-    parser.add_argument('--source_target', type=int, default=0)
+    parser.add_argument('--source_target', type=int, default=4)
     parser.add_argument('--bag_size', type=int, default=50)
     parser.add_argument('--nb_iter', type=int, default=10)
     parser.add_argument('--i_param', type=int, default=0)
@@ -163,7 +163,6 @@ if __name__ == '__main__':
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
-            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
             param_bag = cfg['bagCSI']['param_bag'][args.i_param]
             source_loader, target_bags = get_officehome(source = source, target = target, batch_size=64,
@@ -187,7 +186,6 @@ if __name__ == '__main__':
             dim = cfg['data']['dim']
             dim_latent = cfg['model']['dim_latent']
             n_hidden = cfg['model']['n_hidden']
-            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
 
             source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
                         nb_missing_feat = None,
@@ -227,15 +225,16 @@ if __name__ == '__main__':
         # --------------------------------------------------------------
 
         filesave = f"data-{data}-algo-{algo}-st-{args.source_target}-dep_sample-{dep_sample}-nb_class_in_bag-{nb_class_in_bag}-bag_size-{bag_size}"
-        if args.algo == 'bagCSI':
-            param_bag = cfg['bagCSI']['param_bag'][args.i_param]
-            filesave += f"-param_bag-{param_bag:2.6f}"
-        if args.algo == 'bagTopk':
-            param_bag = cfg['bagTopk']['param_bag'][args.i_param]
-            filesave += f"-topk-{cfg['bagTopk']['topk']}"
+
+        if args.algo == 'bagLME':
+            if args.method == 'learned':
+                topk = cfg['bagLME']['topk_lme']
+            else:
+                topk = cfg['bagTopk']['topk_fix']
+            filesave += f"-method-{args.method}"
+            filesave += f"-topk-{topk}"
             filesave += f"-sw-{cfg['bagTopk']['source_weight']:2.3f}"
             filesave += f"-ew-{cfg['bagTopk']['ent_weight']:2.3f}"
-            filesave += f"-method-{args.method}"
             
         if args.algo == 'daLabelWD':
             filesave += f"-iter_domain_classifier-{cfg['daLabelWD']['iter_domain_classifier']}"
@@ -295,14 +294,14 @@ if __name__ == '__main__':
                         best_param_da = param_da
                         acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
 
-                    print(f'bag {param_bag} da {param_da} {val_max:.4f} {bal_acc_test:.4f}')
+                    print(f'bag {param_bag} da {param_da} {val_max:.4f} {bal_acc_test:.4f} {val_err:.4f}')
         #%%
 
-        if algo == 'bagTopk':
+        if algo == 'bagLME':
             #%%
             from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
-            print('bagTopk')
-            from bagTopk import bagTopK_train
+            print('bagLME')
+            from bagLME import bagLME_train
             if 1:
                 cuda = True if torch.cuda.is_available() else False
                 with open(config_file) as file:
@@ -311,33 +310,37 @@ if __name__ == '__main__':
             x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
             test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
 
-            num_epochs = cfg['bagTopk']['n_epochs']
-            lr = cfg['bagTopk']['lr']
-            topk = cfg['bagTopk']['topk']
-            param_bag = cfg['bagTopk']['param_bag'][args.i_param]
-            source_weight = cfg['bagTopk']['source_weight']
-            ent_weight = cfg['bagTopk']['ent_weight']       
+            num_epochs = cfg['bagLME']['n_epochs']
+            lr = cfg['bagLME']['lr']
+            if args.method == 'learned':
+                topk = cfg['bagLME']['topk_lme']
+            else:
+                topk = cfg['bagLME']['topk_fix']
+            source_weight = cfg['bagLME']['source_weight']
+            ent_weight = cfg['bagLME']['ent_weight']
+            lmesource_weight = cfg['bagLME']['lmesource_weight']       
             val_max = n_class
             for mean_weight in  [0.1,0.5,1,2]:
                 for param_bag in [0.5,1,2]:
                     feat_extract, classifier = get_model(data, cfg,n_class)
                     model = nn.Sequential(feat_extract,classifier)
-                    bagTopK_train(feat_extract,classifier, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
+                    bagLME_train(feat_extract,classifier, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
                                 source_weight=source_weight,verbose=True, ent_weight=ent_weight,
                                 mean_weight=mean_weight,
                                 bag_weight=param_bag,
                                 method=args.method,
+                                lmesource_weight=lmesource_weight,
                                 topk=topk,
                                 lr=lr)
 
 
-                val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
-                if val_err < val_max:
-                    val_max = val_err
-                    best_param_sw = mean_weight
-                    acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
+                    val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                    if val_err < val_max:
+                        val_max = val_err
+                        best_param_sw = mean_weight
+                        acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
 
-                print(f'TopK {best_param_sw}  {val_max:.4f} {bal_acc_test:.4f}')
+                    print(f'LME {best_param_sw}  {val_max:.4f} {bal_acc_test:.4f} {val_err:.4f}')
 
 
 

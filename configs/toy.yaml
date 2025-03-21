@@ -10,15 +10,14 @@ model:
 bagCSI:
   lr: 0.001
   n_epochs: 200
-daLabelOT:  
-  ent_weight: 0.1
-  clf_t_weight: 0.1
-  div_weight: 0.1
-  n_epochs: 200
-  epoch_start_g: 100
-  start_align: 5
-  use_div: False
-  lr: 0.01
-
+bagLME:
+  lr: 0.001
+  n_epochs: 30
+  topk_fix: 1
+  topk_lme: 10
+  source_weight: 1
+  ent_weight: 0.
+  lmesource_weight: 1
+  lmesource_weight: 1
 
 

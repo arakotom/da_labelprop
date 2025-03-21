@@ -8,16 +8,14 @@ model:
 bagCSI:
   lr: 0.001
   n_epochs: 30
-  param_bag:
-    - 1
-bagTopk:
+bagLME:
   lr: 0.001
   n_epochs: 30
-  topk: 1
+  topk_fix: 1
+  topk_lme: 10
   source_weight: 1
-  ent_weight: 0.1
-  param_bag:
-    - 1
+  ent_weight: 0.
+
 
 
 
@@ -71,9 +69,5 @@ daLabelWD:
   lr: 0.005
 
 
-# tested
-# small bag loss does not work (eg 0.1)
-# larger bag loss works (eg 50) seems to work better
-# with entropy loss, the model works better
 
 

@@ -16,16 +16,14 @@ model:
 bagCSI:
   lr: 0.001
   n_epochs: 300
-  param_bag:
-    - 1
-bagTopk:
+bagLME:
   lr: 0.001
   n_epochs: 300
-  topk: 15
+  topk_fix: 15
+  topk_lme: 31
   source_weight: 1
-  ent_weight: 0.1
-  param_bag:
-    - 1
+  ent_weight: 0.
+  lmesource_weight: 1
 
 
 
