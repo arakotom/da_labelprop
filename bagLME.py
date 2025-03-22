@@ -20,7 +20,7 @@ import torchvision.transforms as transforms
 import pandas as pd
 from data import get_toy
 from utils import extract_feature
-from models import FeatureExtractor, DataClassifier
+from models import FeatureExtractor, DataClassifier, FeatureExtractorDigits, DataClassifierDigits
 from utils_local import loop_iterable
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -40,20 +40,40 @@ def entropy_loss(v):
     """
     return torch.mean(torch.sum(- torch.softmax(v, dim=1) * torch.log_softmax(v, dim=1), 1))
 
-def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, data_source,n_step=100,lamb=0.1): 
+def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, source_mean,n_step=100,lamb=0.1): 
     optimizer_mean = optim.Adam([mean_embedding], lr=0.01,betas=(0.9, 0.999),weight_decay=0.001)
     n_class = len(y_target_prop)
-    x_source, y_source = data_source
     for i in range(n_step):
         y_pred = mean_embedding@y_target_prop
         loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
         for j in range(n_class):
-            source_feature_data = x_source*(y_source==j).float().view(-1,1)
-            loss += lamb*torch.mean(torch.abs(source_feature_data.mean(dim=0).to(device) - mean_embedding[:,j]))**2
+            loss += lamb*torch.mean(torch.abs(source_mean[:,j].to(device) - mean_embedding[:,j]))**2
         optimizer_mean.zero_grad()
         loss.backward()
         optimizer_mean.step()
+        if i > 10 and loss.item() < 1e-2:
+            break
     return mean_embedding
+
+def get_mean(source_loader,n_class,feature_extractor,device='cpu'):
+    feature_extractor.eval()
+    count = torch.zeros(n_class)
+    with torch.no_grad():
+        for i,  (x_train, y_train) in enumerate(source_loader):
+            x_train = x_train.to(device).float()
+            y_train = y_train.to(device)
+            source_feature = feature_extractor(x_train)
+            if i == 0:
+                source_mean = torch.zeros(source_feature.shape[1],n_class,device=device)
+            for j in range(n_class):
+                source_feature_data = source_feature*(y_train==j).float().view(-1,1)
+                source_mean[:,j] += source_feature_data.mean(dim=0)
+                count[j] += torch.sum(y_train==j)
+            if torch.min(count) > 200:
+                # make it faster use only 200 samples per class
+                break
+        source_mean = source_mean/count.view(1,-1)
+    return source_mean
 
 
 
@@ -65,7 +85,7 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
                     mean_weight=0.1,
                     bag_weight=0.1,
                     lmesource_weight=0.1,
-                    lmesource_step=500,
+                    lmesource_step=50,
                     verbose=False,large_source_loader=None):
     feature_extractor.train()
     classifier_1.train()
@@ -75,11 +95,11 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
     criterion = nn.CrossEntropyLoss()
     optimizer_feat = optim.Adam(feature_extractor.parameters(), lr=lr,betas=(0.9, 0.999))
     optimizer_c1 = optim.Adam(classifier_1.parameters(), lr=lr,betas=(0.9, 0.999))
-
     first_iter = True
     for epoch in range(num_epochs):
         loss_1_epoch = 0
         loss_2_epoch = 0
+        source_mean = get_mean(source_loader,n_class,feature_extractor,device=device)
         for i, (x_train, y_train) in enumerate(source_loader):
             x_train = x_train.to(device).float()
             y_train = y_train.to(device)
@@ -111,7 +131,6 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
                 ### learning the mean embedding
                 if epoch == 0 :
                     if first_iter:
-                        data_source = extract_feature(nn.Sequential(feature_extractor),source_loader, device=device)
                         cc_mean_embedding = torch.randn(source_feature.shape[1],n_class,requires_grad=True,device=device)
 
                         with torch.no_grad():
@@ -126,15 +145,18 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
                             sum_target_feature_mean += target_feature_mean
                             count += 1
                             average_target_feature_mean = sum_target_feature_mean/count
+
+                    #source_mean = get_mean(source_loader,n_class,feature_extractor,device=device)
                     cc_mean_embedding.requires_grad_ = True
                     cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, 
-                                                                y_target_prop,data_source, n_step=lmesource_step,
+                                                                y_target_prop,source_mean, n_step=lmesource_step,
                                                                 lamb=lmesource_weight)
                     cc_mean_embedding.requires_grad_ = False
                 else:
+                    #source_mean = get_mean(source_loader,n_class,feature_extractor,device=device)
                     cc_mean_embedding.requires_grad_ = True
                     cc_mean_embedding = update_mean_embedding(average_target_feature_mean,cc_mean_embedding, 
-                                                                y_target_prop,data_source, n_step=2,
+                                                                y_target_prop,source_mean, n_step=2,
                                                                 lamb=lmesource_weight)
                     cc_mean_embedding.requires_grad_ = False
 
@@ -225,7 +247,7 @@ if __name__ == '__main__':
 
         plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
     
-    elif 1:
+    elif 0:
     
         from utils_local import loop_iterable
 
@@ -272,7 +294,25 @@ if __name__ == '__main__':
                     bag_size = 50,
                     nb_missing_feat = None,
                     apply_miss_feature_source=False)
-
+    elif 1: 
+        config_file = './configs/mnist_usps.yaml'
+        import yaml
+        from data import get_mnist_usps
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        bag_size = cfg['data']['bag_size']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagLME']['lr']
+        num_epochs = 30
+        n_class = 10
+        use_div = False
+        source_loader, target_bags  = get_mnist_usps(batch_size=256, drop_last=True,
+                    nb_class_in_bag = 10,
+                    bag_size = 50,
+                    nb_missing_feat = None,
+                    apply_miss_feature_source=False)
 
     x_train, y_train = source_loader.dataset.tensors
     large_source_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size=1024, shuffle=True, drop_last=False)
@@ -282,7 +322,12 @@ if __name__ == '__main__':
     
     feat_extract = FeatureExtractor(input_dim=input_size, n_hidden=n_hidden, output_dim=n_hidden)
     classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
-    #classifier_2 = DataClassifier(input_dim=n_hidden, n_class=n_class)
+
+
+    feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
+    classifier_1 = DataClassifierDigits(input_size=1152, n_class=10)
+
+
     bagLME_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
                    source_weight=1,verbose=True, ent_weight=0.0,
                    mean_weight=1,
@@ -303,6 +348,7 @@ if __name__ == '__main__':
     acc, bal_acc_1, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_1), test_loader,n_classes=n_class,return_pred=False)
     #acc, bal_acc_2, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_2), test_loader,n_classes=n_class,return_pred=False)
     print(f'Balanced Accuracy S+T: {bal_acc_1:.4f}')
+
 
 
 

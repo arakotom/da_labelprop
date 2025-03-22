@@ -9,7 +9,7 @@ model:
 bagCSI:
   lr: 0.001
   n_epochs: 30
-bagTopk:
+bagLME:
   lr: 0.001
   n_epochs: 30
   topk_fix: 1
