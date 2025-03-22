@@ -57,7 +57,7 @@ def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, so
 
 def get_mean(source_loader,n_class,feature_extractor,device='cpu'):
     feature_extractor.eval()
-    count = torch.zeros(n_class)
+    count = torch.zeros(n_class,device=device)
     with torch.no_grad():
         for i,  (x_train, y_train) in enumerate(source_loader):
             x_train = x_train.to(device).float()
