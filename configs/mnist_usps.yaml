@@ -15,7 +15,7 @@ bagLME:
   topk_lme: 10
   source_weight: 1
   ent_weight: 0.
-
+  lmesource_weight: 1
 
 
 

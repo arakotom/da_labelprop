@@ -55,6 +55,26 @@ def update_mean_embedding(target_feature_mean, mean_embedding, y_target_prop, so
             break
     return mean_embedding
 
+def update_mean_embedding_clustering(target_feature_mean, mean_embedding, target_feature, y_target_prop, source_mean,n_step=100,lamb=0.1): 
+    optimizer_mean = optim.Adam([mean_embedding], lr=0.01,betas=(0.9, 0.999),weight_decay=0.001)
+    n_class = len(y_target_prop)
+
+
+    for i in range(n_step):
+        y_pred = mean_embedding@y_target_prop
+        loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
+        for j in range(n_class):
+            loss += lamb*torch.mean(torch.abs(source_mean[:,j].to(device) - mean_embedding[:,j]))**2
+        optimizer_mean.zero_grad()
+        loss.backward()
+        optimizer_mean.step()
+        if i > 10 and loss.item() < 1e-2:
+            break
+    return mean_embedding
+
+
+
+
 def get_mean(source_loader,n_class,feature_extractor,device='cpu'):
     feature_extractor.eval()
     count = torch.zeros(n_class,device=device)
@@ -98,7 +118,6 @@ def bagLME_train(feature_extractor,classifier_1, source_loader, target_bags, n_c
     first_iter = True
     for epoch in range(num_epochs):
         loss_1_epoch = 0
-        loss_2_epoch = 0
         source_mean = get_mean(source_loader,n_class,feature_extractor,device=device)
         for i, (x_train, y_train) in enumerate(source_loader):
             x_train = x_train.to(device).float()
@@ -247,7 +266,7 @@ if __name__ == '__main__':
 
         plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
     
-    elif 0:
+    elif 1:
     
         from utils_local import loop_iterable
 
@@ -294,7 +313,7 @@ if __name__ == '__main__':
                     bag_size = 50,
                     nb_missing_feat = None,
                     apply_miss_feature_source=False)
-    elif 1: 
+    elif 0: 
         config_file = './configs/mnist_usps.yaml'
         import yaml
         from data import get_mnist_usps
@@ -324,8 +343,8 @@ if __name__ == '__main__':
     classifier_1 = DataClassifier(input_dim=n_hidden, n_class=n_class)
 
 
-    feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
-    classifier_1 = DataClassifierDigits(input_size=1152, n_class=10)
+    # feat_extract = FeatureExtractorDigits(channel=1, kernel_size=3, output_dim=128)
+    # classifier_1 = DataClassifierDigits(input_size=1152, n_class=10)
 
 
     bagLME_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
@@ -357,6 +376,36 @@ if __name__ == '__main__':
 
 
 
+
+
+# %%
+    from sklearn.cluster import AgglomerativeClustering
+
+    x_target = target_bags[0]['data']
+    y_target_prop = torch.tensor(target_bags[0]['prop']).to(device)
+    target_feature = feat_extract(x_target.to(device).float())
+    with torch.no_grad():
+        target_feature_mean = target_feature.mean(dim=0)
+    mean_embedding = torch.randn(target_feature.shape[1],n_class,requires_grad=True,device=device)
+    optimizer_mean = optim.Adam([mean_embedding], lr=0.01,betas=(0.5, 0.999),weight_decay=0.001)
+    n_class = len(y_target_prop)
+    n_step = 1000
+    n_class_clus = torch.sum(y_target_prop>0).item()
+    cluster = AgglomerativeClustering(n_clusters=n_class_clus, linkage='ward')
+    label_t = cluster.fit_predict(target_feature.cpu().detach().numpy())
+    mean_clustering = torch.zeros(target_feature.shape[1],n_class_clus,device=device)
+    for i in range(n_class_clus):
+        mean_clustering[:,i] = torch.mean(target_feature[label_t==i],dim=0)
+    
+
+    for i in range(n_step):
+        y_pred = mean_embedding@y_target_prop
+        loss = torch.sum(torch.abs(target_feature_mean - y_pred)**2)
+        optimizer_mean.zero_grad()
+        loss.backward()
+        print(loss.item())
+        optimizer_mean.step()
+   
 
 
 # %%

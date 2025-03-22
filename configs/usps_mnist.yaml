@@ -12,7 +12,7 @@ bagLME:
   lr: 0.001
   n_epochs: 30
   topk_fix: 1
-  topk_LME: 10
+  topk_lme: 1
   source_weight: 1
   ent_weight: 0
   lmesource_weight: 1
