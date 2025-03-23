@@ -95,13 +95,13 @@ for i, result in enumerate(list_result):
 
     if i==0 or dataset != dataset_old:
         print('-------------------------------------------------------')
-        header = f"{'Data':10} ST {'Algo':8} {'BS':3}   {'Method':7} {'dep':1}"
+        header = f"{'Data':10} ST {'Algo':10}  {'BS':3}   {'Method':7} {'dep':1}"
         print(header)
         print('-------------------------------------------------------')
 
         dataset_old = dataset
 
-    texte = f"{dataset:10} {st:2}  {algo:8} {bag_size:3}   {method:7} {dep_sample:1} "
+    texte = f"{dataset:10} {st:2}  {algo:10} { bag_size:3}   {method:7} {dep_sample:1} "
     texte += f" {m_res_acc:2.2f} $\\pm$ {s_res_acc:2.2f} \t {nn_count:3}"
     print(texte)
 

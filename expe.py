@@ -259,7 +259,38 @@ if __name__ == '__main__':
 
         acc_test = 0
         bal_acc_test = 0
+       #%%
+        #----------------------------------------------------------------------------------------
+        #       baseline 
+        #----------------------------------------------------------------------------------------
 
+        if args.algo == 'bagBase':
+            #%%
+            print('bagBase')
+
+            learning_rate = cfg['bagCSI']['lr']
+            num_epochs = cfg['bagCSI']['n_epochs']
+            val_max = n_class
+            param_da = 0
+            for param_bag in [0.5,1,2]:
+
+                feat_extract, classifier = get_model(data, cfg,n_class)
+                model = nn.Sequential(feat_extract,classifier)
+
+                bagCSI_train(feat_extract,classifier, source_loader, target_bags, n_classes=n_class, num_epochs=num_epochs,device=device,
+                                param_bag=param_bag, param_da=param_da,
+                                learning_rate=learning_rate,
+                                verbose=True)
+                
+                model.eval()
+                val_err = error_on_bag_prop(model,val_bags,n_class=n_class)
+                if val_err < val_max:
+                    val_max = val_err
+                    best_param_bag = param_bag
+                    best_param_da = param_da
+                    acc_test, bal_acc_test, cm_test = evaluate_clf(model, test_loader,n_classes=n_class)
+
+                print(f'base {param_bag}  {val_max:.4f} {bal_acc_test:.4f} {val_err:.4f}')
 
 
         #%%
