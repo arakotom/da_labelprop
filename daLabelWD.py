@@ -88,8 +88,6 @@ class daLabelWD(object):
         #self.logger.info("--Initialize f, g--")
         print("Initialize f, g")
         for epoch in range(self.n_epochs):
-            # self.recluster = ((self.epoch_start_g > epoch > self.epoch_start_align and ((epoch - self.epoch_start_align) % 2) == 0) or
-            #                   (epoch == self.epoch_start_g) or (epoch >= self.epoch_start_g and (epoch % self.cluster_step) == 0))
             self.align = (epoch >= self.epoch_start_align)
 
 
@@ -132,12 +130,12 @@ class daLabelWD(object):
                 dist_loss, bag_loss, clf_s_loss = torch.zeros(1).to(self.device), torch.zeros(1).to(self.device), torch.zeros(1).to(self.device)
                 if self.align:
                     # Set lr
-                    p = (batch_idx + (epoch - self.epoch_start_align) * len(self.source_data_loader)) / (
-                            len(self.source_data_loader) * (self.n_epochs - self.epoch_start_align))
-                    lr = float(self.init_lr / (1. + 10 * p) ** 0.75)
-                    set_lr(self.optimizer_domain_classifier, lr * self.lr_d_weight)
-                    set_lr(self.optimizer_data_classifier, lr * self.lr_f_weight)
-                    set_lr(self.optimizer_feat_extractor, lr * self.lr_g_weight)
+                    # p = (batch_idx + (epoch - self.epoch_start_align) * len(self.source_data_loader)) / (
+                    #         len(self.source_data_loader) * (self.n_epochs - self.epoch_start_align))
+                    # lr = float(self.init_lr / (1. + 10 * p) ** 0.75)
+                    # set_lr(self.optimizer_domain_classifier, lr * self.lr_d_weight)
+                    # set_lr(self.optimizer_data_classifier, lr * self.lr_f_weight)
+                    # set_lr(self.optimizer_feat_extractor, lr * self.lr_g_weight)
 
                     #if self.beta_ratio == -1:
                     source_weight_un = torch.zeros((y_s.size(0), 1)).to(self.device)
@@ -242,7 +240,13 @@ class daLabelWD(object):
                     self.criterion = nn.CrossEntropyLoss()
                     clf_s_loss = self.criterion(self.data_classifier(z[:x_s.shape[0]]), y_s)
 
-                    loss = clf_s_loss
+                    # Bag loss
+                    outputs_target = self.data_classifier(z[x_s.shape[0]:])
+                    outputs_target = torch.softmax(outputs_target, dim=1)
+                    bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T).to(self.device)))
+                        
+
+                    loss = clf_s_loss + bag_loss*self.bag_loss_weight
 
                     self.optimizer_feat_extractor.zero_grad()
                     self.optimizer_data_classifier.zero_grad()
@@ -269,44 +273,116 @@ class daLabelWD(object):
 
 if __name__ == '__main__':
     
-    import matplotlib.pyplot as plt
-    from data import get_toy
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     seed = 1
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
+    if 0:
+        from data import get_toy
+        import matplotlib.pyplot as plt
+        dim = 2
+        n_class = 3
+        n_hidden = 128
+        num_epochs  = 300
+        lr = 0.001
 
-    dim = 2
+        source_loader, target_bags = get_toy(apply_miss_feature_source=True,
+                                            dim=dim,
+                                            data_variance=0.5,
+                                            center_translation=5)
+        
+        from data import extract_data_label
+        x_test, y_test = extract_data_label(target_bags)
+        x_test = x_test.to(device).float()
 
-    source_loader, target_bags = get_toy(apply_miss_feature_source=False,
-                                        dim=dim,
-                                        data_variance=0.5,
-                                        center_translation=10)
+        # plot source data
+        plt.figure(figsize=(5, 4))
+        plt.scatter(source_loader.dataset.tensors[0][:, 0], source_loader.dataset.tensors[0][:, 1],
+                    c=source_loader.dataset.tensors[1], cmap='viridis')
 
-    from data import extract_data_label
-    x_test, y_test = extract_data_label(target_bags)
-    x_test = x_test.to(device).float()
+        plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
+    
+    elif 1:
+    
+        from utils_local import loop_iterable
 
-    # plot source data
-    plt.figure(figsize=(5, 4))
-    plt.scatter(source_loader.dataset.tensors[0][:, 0], source_loader.dataset.tensors[0][:, 1],
-                c=source_loader.dataset.tensors[1], cmap='viridis')
+        config_file = './configs/office31.yaml'
+        import yaml
+        from data import get_office31
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        source = cfg['data']['files'][4][0]
+        target = cfg['data']['files'][4][1]
+        bag_size = cfg['data']['bag_size']
+        nb_class_in_bag = cfg['data']['nb_class_in_bag']
+        n_class = cfg['data']['n_class']
+        dim = cfg['data']['dim']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagLME']['lr']
+        num_epochs = cfg['bagLME']['n_epochs']
+        source_loader, target_bags = get_office31(source = source, target = target, batch_size=64, drop_last=True,
+                    nb_missing_feat = None,
+                    nb_class_in_bag = nb_class_in_bag,
+                    bag_size = bag_size )
+    elif 0:
+        config_file = './configs/visda.yaml'
+        import yaml
+        from data import get_visda
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        bag_size = cfg['data']['bag_size']
+        dim = cfg['data']['dim']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagLME']['lr']
+        num_epochs = 30
+        classe_vec = [0,1,2,3,4,5,6,7,8,9,10,11]
+        #classe_vec = [0,4,11]
+        n_class = len(classe_vec)
+        use_div = False
+        source_loader, target_bags  = get_visda(batch_size=256, drop_last=True,
+                    nb_class_in_bag = 10,
+                    classe_vec=classe_vec,
+                    bag_size = 50,
+                    nb_missing_feat = None,
+                    apply_miss_feature_source=False)
+    elif 0: 
+        config_file = './configs/mnist_usps.yaml'
+        import yaml
+        from data import get_mnist_usps
+        cuda = True if torch.cuda.is_available() else False
+        with open(config_file) as file:
+            cfg = yaml.load(file, Loader=yaml.FullLoader)
+        bag_size = cfg['data']['bag_size']
+        dim_latent = cfg['model']['dim_latent']
+        n_hidden = cfg['model']['n_hidden']
+        lr = cfg['bagLME']['lr']
+        num_epochs = 30
+        n_class = 10
+        use_div = False
+        source_loader, target_bags  = get_mnist_usps(batch_size=256, drop_last=True,
+                    nb_class_in_bag = 10,
+                    bag_size = 50,
+                    nb_missing_feat = None,
+                    apply_miss_feature_source=False)
 
-    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap='viridis', marker='x')
-
-   
+    x_train, y_train = source_loader.dataset.tensors
+    large_source_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, y_train), batch_size=1024, shuffle=True, drop_last=False)
+    large_source_loader = loop_iterable(large_source_loader)
+    input_size = x_train.size(1)
+    # Initialize the model, loss function, and optimizer
+    dim = input_size
 
     #%%
     from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
     from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
     from utils_local import estimate_source_proportion
-    dim_latent = 10
-    n_hidden = 100
-    n_class = 3
+
     feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
     data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
     data_class_t_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
@@ -314,14 +390,14 @@ if __name__ == '__main__':
     domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
     cuda = True if torch.cuda.is_available() else False
 
-    lr_f, lr_g, lr_phi, lr_d = 0.01, 0.01, 0.01, 0.01
+    lr_f, lr_g, lr_phi, lr_d = 0.001, 0.001, 0.001, 0.001
     ent_weight = clf_t_weight = div_weight = 0.1
-    bag_loss_weight = 100
-    n_epochs = 50
-    epoch_start_g = 5
+    bag_loss_weight = 1
+    dist_loss_weight = 0
+    epoch_start_g = 0
     it = 0
     use_div = False #(dataset == "office" or dataset == "visda")
-    opt={'start_align': 5,'lr': 0.001}
+    opt={'start_align': 10,'lr': 0.001}
     proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
 
     
@@ -329,10 +405,12 @@ if __name__ == '__main__':
                            cuda=cuda,
                      n_class=n_class, 
                     epoch_start_align=opt["start_align"], init_lr=opt["lr"],
-                    n_epochs=n_epochs,
+                    n_epochs=num_epochs,
                     iter=it, 
+                    iter_domain_classifier=2,
                     epoch_start_g=epoch_start_g,
                     proportion_S=proportion_S,
+                    dist_loss_weight=dist_loss_weight,
                     bag_loss_weight=bag_loss_weight)
     set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr_g, betas=(0.5, 0.999)))
     set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr_f, betas=(0.5, 0.999)))
@@ -340,15 +418,20 @@ if __name__ == '__main__':
 
     dalabelot.fit()
 
+    #%%
 
-# %%
 
-    from utils import  create_data_loader
-    x_test, y_test = extract_data_label(target_bags)
-    test_loader= create_data_loader(x_test, y_test, batch_size=32,shuffle=False,drop_last=False)
-    acc_train, map_train = evaluate_data_classifier(dalabelot, source_loader, is_target=False, is_ft=False)
-    acc_test, map_test = evaluate_data_classifier(dalabelot, test_loader, is_target=True, is_ft=False)
-    print(f"Train accuracy: {acc_train:.4f} / Test accuracy: {acc_test:.4f}")
+
+
+    
+    from utils import evaluate_clf, create_data_loader, extract_data_label
+
+    x_test, y_test = extract_data_label(target_bags, type_data='data', type_label='label')
+    test_loader = create_data_loader(x_test, y_test, batch_size=128, shuffle=False,drop_last=False)
+
+    acc, bal_acc_1, cm = evaluate_clf(nn.Sequential(feat_extract_dalabelot,data_class_dalabelot), test_loader,n_classes=n_class,return_pred=False)
+    #acc, bal_acc_2, cm = evaluate_clf(nn.Sequential(feat_extract,classifier_2), test_loader,n_classes=n_class,return_pred=False)
+    print(f'Balanced Accuracy S+T: {bal_acc_1:.4f}')
 
 
 # %%

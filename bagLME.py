@@ -349,9 +349,9 @@ if __name__ == '__main__':
 
     bagLME_train(feat_extract,classifier_1, source_loader, target_bags, n_class=n_class, num_epochs=num_epochs,device=device,
                    source_weight=1,verbose=True, ent_weight=0.0,
-                   mean_weight=1,
+                   mean_weight=0,
                    bag_weight=1,
-                   lmesource_weight=1,
+                   lmesource_weight=0,
                     method='learned',
                    topk=31,
                    lr=lr,large_source_loader=large_source_loader)
