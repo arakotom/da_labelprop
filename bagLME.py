@@ -352,8 +352,8 @@ if __name__ == '__main__':
                    mean_weight=1,
                    bag_weight=1,
                    lmesource_weight=1,
-                    method='fix',
-                   topk=1,
+                    method='learned',
+                   topk=31,
                    lr=lr,large_source_loader=large_source_loader)
 
 

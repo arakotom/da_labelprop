@@ -92,11 +92,6 @@ class daLabelWD(object):
             #                   (epoch == self.epoch_start_g) or (epoch >= self.epoch_start_g and (epoch % self.cluster_step) == 0))
             self.align = (epoch >= self.epoch_start_align)
 
-            # S_batches = loop_iterable(self.source_data_loader)
-            # batch_iterator = zip(S_batches, loop_iterable(self.target_data_loader))
-            # batch_iterator_w = zip(S_batches, loop_iterable(self.target_data_loader))
-            # iterations = len(self.source_data_loader)
-
 
             S_batches = loop_iterable(self.source_data_loader)
             batch_iterator = zip(S_batches, loop_iterable(self.target_bags))
@@ -116,19 +111,7 @@ class daLabelWD(object):
             if self.align:
                 self.domain_classifier.train()
 
-            # if self.recluster and self.beta_ratio == -1:
-            #     # Estimate proportion
-            #     if self.proportion_method == "gt":
-            #         proportion_T = self.proportion_T_gt
-            #     else:
-            #         self.logger.info(f"k_prop: {k_prop}")
-            #         proportion_T = estimate_proportion(self, k_prop=k_prop, proportion_T=proportion_T, comment=f"{self.ts}_adv_estim_{epoch}")
-            #         if epoch >= self.epoch_start_g:
-            #             k_prop += 1
-            #         elif epoch > self.epoch_start_align + 1:
-            #             k_prop = 2
-            #     self.hist_proportion = np.vstack((self.hist_proportion, proportion_T.numpy()))
-            #     compute_diff_label(self, self.proportion_T_gt, comment=f"pT(Y) {self.proportion_method}")
+
 
             for batch_idx in range(iterations):
                 #(x_s, y_s), (x_t, y_t) = next(batch_iterator)
@@ -248,11 +231,6 @@ class daLabelWD(object):
                     self.optimizer_feat_extractor.zero_grad()
                     loss.backward()
                     
-                    # clf_s_loss.backward(retain_graph=True)
-                    # (self.dist_loss_weight*dist_loss).backward(retain_graph=True)
-                    # (self.bag_loss_weight*bag_loss).backward()
-                    # normalize_gradient(self.data_classifier)
-                    # normalize_gradient(self.feat_extractor)
 
                     
                     self.optimizer_data_classifier.step()

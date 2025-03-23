@@ -18,13 +18,13 @@ current_path = os.getcwd()
 
 list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
-list_data = ['mnist_usps','officehome','office31']
 list_data = ['visda','office31','mnist_usps','usps_mnist','officehome']
 list_data = ['mnist_usps','usps_mnist']
-algo_list = ['bagLME']
+list_data = ['office31']
 n_param = 1
-
+algo_list = ['daLabelWD']
 if 1:
+
     expe = 0 # dependent bag size
 elif 0:
     expe = 1 # independent bag size
@@ -62,5 +62,7 @@ for data in list_data:
                         print('sbatch tasks')
                         command = f"sbatch expe.slurm {expe:} {data:} {algo:} {bag_size} {problem:} {i_p:} {seed:} &"
                         os.system(command)
+
+# %%
 
 # %%

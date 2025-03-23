@@ -24,6 +24,22 @@ bagLME:
   source_weight: 1
   ent_weight: 0.
   lmesource_weight: 1
+daLabelWD:  
+  clf_t_weight: 0
+  n_epochs: 300
+  epoch_start_g: 0
+  start_align: 20
+  iter_domain_classifier: 2
+  lr: 0.001
+  dist_loss_weight: 
+    - 0.1
+    - 0.5
+    - 1
+    - 2
+  bag_loss_weight:
+    - 0.5
+    - 1
+    - 2
 
 
 
@@ -65,29 +81,4 @@ daLabelOT:
   lr: 0.001
   lr_phi: 0.001
   #nblocks: 1
-daLabelWD:  
-  clf_t_weight: 0
-  n_epochs: 30
-  epoch_start_g: 0
-  start_align: 1
-  dist_loss_weight: 
-    - 1
-    - 0.1
-    - 0.01
-    - 0.001
-    - 0.0001
-  iter_domain_classifier: 2
-  bag_loss_weight: 
-    - 1
-    - 25
-    - 50
-    - 100
-  lr: 0.005
-
-
-# tested
-# small bag loss does not work (eg 0.1)
-# larger bag loss works (eg 50) seems to work better
-# with entropy loss, the model works better
-
 
