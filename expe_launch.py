@@ -20,9 +20,9 @@ list_bag_size = [50]
 list_data = ['officehome', 'visda', 'office31','mnist_usps','usps_mnist']
 list_data = ['visda','office31','mnist_usps','usps_mnist','officehome']
 list_data = ['mnist_usps','usps_mnist']
-list_data = ['office31']
+list_data = ['officehome']
 n_param = 1
-algo_list = ['daLabelWD']
+algo_list = ['daLabelWD','bagBase']
 if 1:
 
     expe = 0 # dependent bag size
