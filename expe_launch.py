@@ -23,6 +23,7 @@ list_data = ['mnist_usps','usps_mnist']
 list_data = ['officehome']
 n_param = 1
 algo_list = ['daLabelWD','bagBase']
+algo_list = ['bagBase']
 if 1:
 
     expe = 0 # dependent bag size
