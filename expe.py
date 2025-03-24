@@ -471,7 +471,6 @@ if __name__ == '__main__':
             lr = cfg['daLabelWD']['lr']
             start_align = cfg['daLabelWD']['start_align']
             proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
-            dist_loss_weight = cfg['daLabelWD']['dist_loss_weight'][args.i_param]
             val_max = n_class
             it = iter
             for dist_loss_weight in cfg['daLabelWD']['dist_loss_weight']:
