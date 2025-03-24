@@ -21,7 +21,7 @@ daLabelWD:
  clf_t_weight: 0
 n_epochs: 30
 epoch_start_g: 0
-start_align: 5
+start_align: 0
 iter_domain_classifier: 2
 lr: 0.001
 dist_loss_weight: 
