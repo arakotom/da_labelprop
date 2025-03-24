@@ -20,7 +20,7 @@ bagLME:
 daLabelWD:  
 n_epochs: 30
 epoch_start_g: 0
-start_align: 0
+start_align: 2
 iter_domain_classifier: 2
 lr: 0.001
 dist_loss_weight: 
