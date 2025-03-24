@@ -21,7 +21,7 @@ def normalize_gradient(model):
 class daLabelWD(object):
     def __init__(self, feat_extractor, data_classifier, domain_classifier, source_data_loader, target_bags,
                  grad_scale=1.0, cuda=False,  n_class=10, ts=1, 
-                 epoch_start_align=11, cluster_param="ward", epoch_start_g=30, n_epochs=100, gamma=10, init_lr=0.001, iter=0,
+                 epoch_start_align=11, n_epochs=100, gamma=10, init_lr=0.001, iter=0,
                  iter_domain_classifier=10, factor_f=1, lr_g_weight=1.0, lr_f_weight=1.0, lr_d_weight=1.0, factor_g=1.0,
                  eval_data_loader=None, proportion_T_gt=None, setting=10, beta_ratio=-1, proportion_S=None,
                  bag_loss_weight=1,
@@ -64,7 +64,6 @@ class daLabelWD(object):
         self.optimizer_feat_extractor = optim.SGD(self.feat_extractor.parameters(), lr=0.001)
         self.optimizer_data_classifier = optim.SGD(self.data_classifier.parameters(), lr=0.001)
         self.optimizer_domain_classifier = optim.SGD(self.domain_classifier.parameters(), lr=0.01)
-        #self.beta_ratio = beta_ratio
 
     def fit(self):
         if self.cuda:
@@ -150,49 +149,47 @@ class daLabelWD(object):
                     #######################
                     # Train discriminator #
                     #######################
-                    set_requires_grad(self.feat_extractor, requires_grad=False)
-                    set_requires_grad(self.domain_classifier, requires_grad=True)
-                    for kk in range(k_critic):
-                        #(x_s_w, y_s_w), (x_t_w, _) = next(batch_iterator_w)
-                        #x_s_w, x_t_w, y_s_w = x_s_w.to(self.device), x_t_w.to(self.device), y_s_w.to(self.device)
-                        (x_s_w, y_s_w), (bag_t_w) = next(batch_iterator_w)
-                        i_bag = np.random.randint(0, len(self.target_bags))
-                        bag_t_w = self.target_bags[i_bag]
+                    wass_loss_tot = 0
+                    if self.dist_loss_weight > 0:
+                        set_requires_grad(self.feat_extractor, requires_grad=False)
+                        set_requires_grad(self.domain_classifier, requires_grad=True)
+                        for kk in range(k_critic):
+                            (x_s_w, y_s_w), (bag_t_w) = next(batch_iterator_w)
+                            i_bag = np.random.randint(0, len(self.target_bags))
+                            bag_t_w = self.target_bags[i_bag]
 
 
-                        x_t_w = bag_t_w['data']
-                        x_s_w, x_t_w, y_s_w = x_s_w.to(self.device), x_t_w.to(self.device), y_s_w.to(self.device)
+                            x_t_w = bag_t_w['data']
+                            x_s_w, x_t_w, y_s_w = x_s_w.to(self.device), x_t_w.to(self.device), y_s_w.to(self.device)
 
+                            source_weight_un_w = torch.zeros((y_s_w.size(0), 1)).to(self.device)
+                            for j in range(self.n_class):
+                                nb_sample = y_s_w.eq(j).nonzero().size(0)
+                                if nb_sample != 0:
+                                    source_weight_un_w[y_s_w == j] = proportion_T[j]/ nb_sample
+                            with torch.no_grad():
+                                z_w = self.feat_extractor(torch.cat((x_s_w, x_t_w), 0))
+                                s_w = z_w[:x_s_w.shape[0]]
+                                t_w = z_w[x_s_w.shape[0]:]
+                                if s_w.size(0) >= t_w.size(0):
+                                    ind = torch.randperm(s_w.size(0))[:t_w.size(0)]
+                                    s_w = s_w[ind]
+                                    source_weight_un_w = source_weight_un_w[ind]
+                                elif s_w.size(0) < t_w.size(0):
+                                    ind = torch.randperm(t_w.size(0))[:s_w.size(0)]
+                                    t_w = t_w[ind]
+                            #print(s_w.shape, t_w.shape)
+                            gp = gradient_penalty(self.domain_classifier, s_w, t_w, self.cuda)
+                            critic_w = self.domain_classifier(torch.cat((s_w, t_w), 0))
+                            critic_s_w, critic_t_w = critic_w[:s_w.shape[0]], critic_w[s_w.shape[0]:]
+                            #print(critic_s_w.shape, critic_t_w.shape, source_weight_un_w.shape)
+                            wasserstein_distance_w = (critic_s_w * source_weight_un_w.detach()).sum() - critic_t_w.mean()
 
-
-                        source_weight_un_w = torch.zeros((y_s_w.size(0), 1)).to(self.device)
-                        for j in range(self.n_class):
-                            nb_sample = y_s_w.eq(j).nonzero().size(0)
-                            if nb_sample != 0:
-                                source_weight_un_w[y_s_w == j] = proportion_T[j]/ nb_sample
-                        with torch.no_grad():
-                            z_w = self.feat_extractor(torch.cat((x_s_w, x_t_w), 0))
-                            s_w = z_w[:x_s_w.shape[0]]
-                            t_w = z_w[x_s_w.shape[0]:]
-                            if s_w.size(0) >= t_w.size(0):
-                                ind = torch.randperm(s_w.size(0))[:t_w.size(0)]
-                                s_w = s_w[ind]
-                                source_weight_un_w = source_weight_un_w[ind]
-                            elif s_w.size(0) < t_w.size(0):
-                                ind = torch.randperm(t_w.size(0))[:s_w.size(0)]
-                                t_w = t_w[ind]
-                        #print(s_w.shape, t_w.shape)
-                        gp = gradient_penalty(self.domain_classifier, s_w, t_w, self.cuda)
-                        critic_w = self.domain_classifier(torch.cat((s_w, t_w), 0))
-                        critic_s_w, critic_t_w = critic_w[:s_w.shape[0]], critic_w[s_w.shape[0]:]
-                        #print(critic_s_w.shape, critic_t_w.shape, source_weight_un_w.shape)
-                        wasserstein_distance_w = (critic_s_w * source_weight_un_w.detach()).sum() - critic_t_w.mean()
-
-                        critic_cost = - wasserstein_distance_w + gamma * gp
-                        self.optimizer_domain_classifier.zero_grad()
-                        critic_cost.backward()
-                        self.optimizer_domain_classifier.step()
-                        wass_loss_tot += wasserstein_distance_w.item()
+                            critic_cost = - wasserstein_distance_w + gamma * gp
+                            self.optimizer_domain_classifier.zero_grad()
+                            critic_cost.backward()
+                            self.optimizer_domain_classifier.step()
+                            wass_loss_tot += wasserstein_distance_w.item()
 
                     ##############
                     # Train f, g #
@@ -219,20 +216,18 @@ class daLabelWD(object):
                     bag_loss = torch.mean(torch.abs(outputs_target.mean(dim=0) - torch.Tensor(proportion_T).to(self.device)))
                         
                     #
-                    output_class_t = self.data_classifier(z[x_s.shape[0]:])
-                    ent_loss = self.ent_weight * entropy_loss(output_class_t)
+                    # output_class_t = self.data_classifier(z[x_s.shape[0]:])
+                    # ent_loss = self.ent_weight * entropy_loss(output_class_t)
 
 
                     loss = clf_s_loss + self.dist_loss_weight*dist_loss + bag_loss*self.bag_loss_weight
-                    loss += ent_loss
+                    #loss += ent_loss
                     self.optimizer_data_classifier.zero_grad()
                     self.optimizer_feat_extractor.zero_grad()
-                    loss.backward()
-                    
-
-                    
+                    loss.backward() 
                     self.optimizer_data_classifier.step()
                     self.optimizer_feat_extractor.step()
+
                 else:
                     set_requires_grad(self.data_classifier, requires_grad=True)
                     set_requires_grad(self.feat_extractor, requires_grad=True)
@@ -378,26 +373,23 @@ if __name__ == '__main__':
     # Initialize the model, loss function, and optimizer
     dim = input_size
 
-    #%%
-    from models import ResidualPhi, DomainClassifier, DataClassifier, FeatureExtractor
-    from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor, set_optimizer_phi
+    
+    from models import DomainClassifier, DataClassifier, FeatureExtractor
+    from utils_local import set_optimizer_data_classifier, set_optimizer_domain_classifier, set_optimizer_feat_extractor
     from utils_local import estimate_source_proportion
 
     feat_extract_dalabelot = FeatureExtractor(dim, n_hidden=n_hidden, output_dim=dim_latent)
     data_class_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
-    data_class_t_dalabelot = DataClassifier(input_dim= dim_latent, n_class=n_class)
-    phi_dalabelot = ResidualPhi(nblocks=5, dim= dim_latent, nl_layer='relu', norm_layer='batch1d', n_branches=1)
     domain_class_dalabelot = DomainClassifier(input_dim= dim_latent,n_hidden=n_hidden)
     cuda = True if torch.cuda.is_available() else False
 
-    lr_f, lr_g, lr_phi, lr_d = 0.001, 0.001, 0.001, 0.001
-    ent_weight = clf_t_weight = div_weight = 0.1
+    lr_f, lr_g, lr_d = 0.001, 0.001, 0.001
+    ent_weight = clf_t_weight = div_weight = 0.
     bag_loss_weight = 1
-    dist_loss_weight = 0
-    epoch_start_g = 0
+    dist_loss_weight = 0.001
     it = 0
     use_div = False #(dataset == "office" or dataset == "visda")
-    opt={'start_align': 10,'lr': 0.001}
+    opt={'start_align': 0,'lr': 0.001}
     proportion_S = estimate_source_proportion(source_loader, n_clusters=n_class)
 
     
@@ -408,17 +400,16 @@ if __name__ == '__main__':
                     n_epochs=num_epochs,
                     iter=it, 
                     iter_domain_classifier=2,
-                    epoch_start_g=epoch_start_g,
                     proportion_S=proportion_S,
                     dist_loss_weight=dist_loss_weight,
-                    bag_loss_weight=bag_loss_weight)
+                    bag_loss_weight=bag_loss_weight,)
     set_optimizer_feat_extractor(dalabelot, optim.Adam(dalabelot.feat_extractor.parameters(), lr=lr_g, betas=(0.5, 0.999)))
     set_optimizer_data_classifier(dalabelot, optim.Adam(dalabelot.data_classifier.parameters(), lr=lr_f, betas=(0.5, 0.999)))
     set_optimizer_domain_classifier(dalabelot, optim.Adam(dalabelot.domain_classifier.parameters(), lr=lr_d, betas=(0.5, 0.999)))
 
     dalabelot.fit()
 
-    #%%
+    
 
 
 

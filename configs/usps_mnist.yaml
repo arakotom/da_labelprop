@@ -20,14 +20,14 @@ bagLME:
 daLabelWD:  
 n_epochs: 30
 epoch_start_g: 0
-start_align: 2
+start_align: 11
 iter_domain_classifier: 2
 lr: 0.001
 dist_loss_weight: 
+  - 0.001
+  - 0.01
   - 0.1
-  - 0.5
   - 1
-  - 2
 bag_loss_weight:
   - 0.5
   - 1
